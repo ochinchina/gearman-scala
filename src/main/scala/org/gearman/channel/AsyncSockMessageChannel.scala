@@ -10,6 +10,7 @@ import java.io.{ByteArrayInputStream,
 			DataInputStream,
 			ByteArrayOutputStream,
 			DataOutputStream}
+import java.util.concurrent.{ExecutorService}
 import scala.util.control.Breaks._
 import org.gearman.message._
 
@@ -99,7 +100,6 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 	private def processBinMsgBuf() =  {
 		var msg = extractMsg		
 		if( msg != null ) {
-			println( "received message:" + msg )
 			this.msgHandler.handleMessage( msg, this )
 			true
 		} else {
@@ -124,7 +124,6 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 					case ex: Exception => ex.printStackTrace
 				}
 				copy( msgBuf, len + 12, msgBuf, 0, msgBufLen )
-				println( "msgBufLen=" + msgBufLen )
 			}
 		}
 		msg
@@ -172,8 +171,8 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 }
 
 object AsyncSockMessageChannel {
-	def accept( sockAddr: SocketAddress, callback: ((MessageChannel))=>Unit ) {
-		val serverSock = AsynchronousServerSocketChannel.open()
+	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: ExecutorService ) {
+		val serverSock = if( exectutor == null ) AsynchronousServerSocketChannel.open() else AsynchronousServerSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor ) )
 		serverSock.bind( sockAddr )
 		serverSock.accept( null, new CompletionHandler[AsynchronousSocketChannel, Void]{
 			def completed( sockChannel: AsynchronousSocketChannel, data: Void ) {

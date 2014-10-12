@@ -583,7 +583,7 @@ case class WorkWarningRes( jobHandle: String, data: String ) extends BinResponse
 }
 
 
-class GrabJobUniq extends BinRequest {
+case class GrabJobUniq() extends BinRequest {
 	def getType = Message.GRAB_JOB_UNIQ
 	override protected def writeBody( out: DataOutputStream ) {
 	}

@@ -3,8 +3,9 @@ package org.gearman.server
 import org.gearman.message._
 import org.gearman.channel._
 import scala.collection.mutable.{HashMap,LinkedList,HashSet,PriorityQueue}
-import java.util.{UUID}
+import java.util.{UUID, Timer, TimerTask}
 import scala.util.control.Breaks.{breakable,break}
+import java.util.concurrent.{ExecutorService}
 
 
 
@@ -60,8 +61,10 @@ class WorkerManager() {
 	private val workerFuncs = new HashMap[MessageChannel, HashMap[ String, Int ] ]
 	
 	private val presleepWorkers = new HashSet[ MessageChannel ]
+	
+	private val workerIds = new HashMap[ MessageChannel, String ]
 
-	def addWorkerFunc( funcName: String, channel: MessageChannel, timeout: Int = -1 ) {
+	def addWorkerFunc( funcName: String, channel: MessageChannel, timeout: Int = 0 ) {
 		if( !funcWorkers.contains( funcName ) ) funcWorkers += funcName -> new HashMap[MessageChannel, Int ]
 		funcWorkers( funcName ) += channel -> timeout
 		if( !workerFuncs.contains( channel ) ) workerFuncs += channel -> new HashMap[ String, Int ]
@@ -98,12 +101,25 @@ class WorkerManager() {
 	}
 	
 	def getFuncWorkers( funcName: String ) =  funcWorkers.get( funcName )
+	
+	def getTimeout( funcName: String, channel: MessageChannel ): Int = {
+		funcWorkers.get( funcName ) match {
+			case Some( channelTimeout ) =>  channelTimeout.get( channel ).getOrElse( 0 )
+			case _ => 0
+		}
+	}
 
-	def setWorkerPreSleep( channel: MessageChannel, presleep: Boolean ) {
+	def setPreSleep( channel: MessageChannel, presleep: Boolean ) {
 		if( presleep ) presleepWorkers += channel else presleepWorkers -= channel		
 	}
 	
-	def isWorkerPreSleep( channel: MessageChannel ) = presleepWorkers.contains( channel )
+	def isPreSleep( channel: MessageChannel ) = presleepWorkers.contains( channel )
+	
+	def setId( channel: MessageChannel, id: String ) {
+		workerIds += channel -> id
+	}
+	
+	def getId( channel: MessageChannel ) = workerIds.get( channel )
 }
 
 class JobManager() {
@@ -115,7 +131,9 @@ class JobManager() {
 	private val processingJobs = new HashMap[ MessageChannel, HashMap[ String, Job ] ]
 	
     /**
-     *  add a new job
+     *  submit a new job
+     *  
+     * @param job the new job submitted	      
      */	     
 	def submitJob( job: Job ) {
 		if( !pendingJobs.contains( job.funcName ) ) {
@@ -218,9 +236,10 @@ class JobManager() {
 		
 }
 
-class JobServer extends MessageHandler {
+class JobServer( executor: ExecutorService ) extends MessageHandler {
 	private val workers = new WorkerManager
 	private val jobs = new JobManager
+	private val timer = new Timer
 	
 	
 	def handleMessage( msg: Message, from: MessageChannel ) {
@@ -256,7 +275,8 @@ class JobServer extends MessageHandler {
 				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.Low, true, from, null )
 				handleSubmitJob( from, job )
 				from.send( new JobCreated( job.jobHandle ) )
-			case GrabJob() => handleGrabJob( from )
+			case GrabJob() => handleGrabJob( from, false )
+			case GrabJobUniq() => handleGrabJob( from, true )
 			case GetStatus( jobHandle ) => handleGetStatus( from, jobHandle )
 			case WorkDataReq( jobHandle, data ) => handleWorkDataReq( from, jobHandle, data )
 			case WorkWarningReq( jobHandle, data ) => handleWorkWarningReq( from, jobHandle, data )
@@ -264,6 +284,8 @@ class JobServer extends MessageHandler {
 			case WorkFailReq( jobHandle ) => handleWorkFailReq( from, jobHandle )
 			case WorkExceptionReq( jobHandle, data ) => handleWorkExceptionReq( from, jobHandle, data )
 			case WorkCompleteReq( jobHandle: String, data: String ) => handleWorkCompleteReq( from, jobHandle, data )
+			case PreSleep() => workers.setPreSleep( from, true )
+			case SetClientId( id ) => workers.setId( from, id )
 			case _ =>     
 		}
 	}
@@ -294,13 +316,29 @@ class JobServer extends MessageHandler {
 	
 	private def handleSubmitJob( from: MessageChannel, job: Job )  {
 		jobs.submitJob( job )
+		workers.getFuncWorkers( job.funcName ) match {
+			case Some( channels ) => 
+				channels.foreach( p =>
+					if( workers.isPreSleep( p._1 ) ) {
+						p._1.send( new Noop )
+					}  
+				)
+			case _ =>
+		}
+		
 	}
 	
-	private def handleGrabJob( from: MessageChannel ) {				
+	private def handleGrabJob( from: MessageChannel, uniq: Boolean ) {				
 		workers.getWorkerFuncs( from ) match {
 			case Some( funcs ) =>
 				jobs.takeJob( funcs, from ) match {
-					case Some( job ) => from.send( new JobAssign( job.jobHandle, job.funcName,job.data ) )
+					case Some( job ) =>
+						workers.setPreSleep( from, false ) 
+						if( uniq )
+							from.send( new JobAssignUniq( job.jobHandle, job.funcName, job.uniqId, job.data ) )
+						else from.send( new JobAssign( job.jobHandle, job.funcName, job.data ) )
+						val timeout = workers.getTimeout( job.funcName, from )
+						if( timeout > 0 ) timer.schedule( new TimerTask { def run { handleTimeout( from, job.jobHandle ) } }, timeout * 1000 )
 					case _ =>  from.send( new NoJob() )
 				}
 				
@@ -364,5 +402,16 @@ class JobServer extends MessageHandler {
 				jobs.removeJob( job )
 			case _ =>
 		}
+	}
+	
+	private def handleTimeout( processingChannel: MessageChannel, jobHandle: String ) {
+		executor.submit( new Runnable { def run {
+			jobs.getProcessingJob( processingChannel, jobHandle ) match {
+				case Some( job ) => 
+					if( !job.background ) job.from.send( new WorkFailRes( jobHandle ) )
+					jobs.removeJob( job )
+				case _ =>
+			}
+		}})
 	} 
 }
