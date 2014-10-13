@@ -98,6 +98,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		val dos = new DataOutputStream( bos )
 		msg.writeTo( dos )
 		
+		println( "send " + msg )
 		send( ByteBuffer.wrap( bos.toByteArray ) )
 	}
 	       
@@ -139,6 +140,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 			}
 			
 			def failed( exc: Throwable, data: Void ) {
+				println( "diconnected")
 				handleDisconnect
 			}
 		})
@@ -148,20 +150,33 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		breakable {
 			while( true ) {
 				val msg = msgBuf.extractMsg
-				if( msg == null ) break else msgHandler.handleMessage( msg, this )
+				if( msg == null ) 
+					break 
+				else {
+					println( "receive " + msg )
+					try {
+						msgHandler.handleMessage( msg, this )
+					}catch{
+						case e:Throwable => e.printStackTrace
+					}
+				}
 			}
 		} 
 	}
 		
 	private def handleDisconnect() {
 		connected = false
-		msgHandler.handleDisconnect( this )
+		try {
+			msgHandler.handleDisconnect( this )
+		}catch {
+			case e:Throwable => e.printStackTrace
+		}
 	}
 }
 
 object AsyncSockMessageChannel {
-	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: ExecutorService ) {
-		val serverSock = if( exectutor == null ) AsynchronousServerSocketChannel.open() else AsynchronousServerSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor ) )
+	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: Option[ExecutorService] = None ) {
+		val serverSock = if( exectutor.isEmpty ) AsynchronousServerSocketChannel.open() else AsynchronousServerSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
 		serverSock.bind( sockAddr )
 		serverSock.accept( null, new CompletionHandler[AsynchronousSocketChannel, Void]{
 			def completed( sockChannel: AsynchronousSocketChannel, data: Void ) {
@@ -174,8 +189,8 @@ object AsyncSockMessageChannel {
 		})
 	}
 	
-	def connect( sockAddr: SocketAddress ): MessageChannel  = {
-		val sockChannel = AsynchronousSocketChannel.open
+	def connect( sockAddr: SocketAddress, exectutor: Option[ExecutorService] = None ): MessageChannel  = {
+		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
 		val connectedChannel = new ValueNotifier[MessageChannel]
 		
 		sockChannel.connect( sockAddr, null, new CompletionHandler[Void, Void] {

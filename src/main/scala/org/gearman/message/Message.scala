@@ -58,7 +58,6 @@ case class AdminResponse( lines: List[ String ] ) extends Message {
 			out.write( s.getBytes( "UTF-8") )
 			out.write( '\n')
 		}
-		if( lines.length != 0 ) out.write( '.')
 	}
 } 
 

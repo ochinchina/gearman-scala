@@ -13,7 +13,7 @@ class GearmanServer( sockAddr: SocketAddress ) {
 		AsyncSockMessageChannel.accept( sockAddr, (channel:MessageChannel) => {
 			channel.setMessageHandler( jobServer )
 			channel.start
-		}, executor ) 		
+		}, Some( executor ) ) 		
 	}
 	
 	

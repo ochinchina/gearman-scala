@@ -100,7 +100,21 @@ class WorkerManager() {
 		if( funcs.isEmpty ) None else Some( funcs.get.keySet ) 
 	}
 	
-	def getFuncWorkers( funcName: String ) =  funcWorkers.get( funcName )
+	/**
+	 *  get all the registered workers
+	 *  
+	 * @return all the workers ( presents in a MessageChannel Set )	 	  
+	 */	 	
+	def getWorkers = workerFuncs.keySet
+	
+	def getAllFunctions = funcWorkers.keySet  
+	
+	/**
+	 *  get all the workers that have function <code>funcName</code>
+	 *  
+	 * @return a HashMap[ MessageChannel, Int], Int is the timeout of worker	 	 
+	 */	 	
+	def getFuncWorkers( funcName: String ): Option[ HashMap[MessageChannel, Int] ] =  funcWorkers.get( funcName )
 	
 	def getTimeout( funcName: String, channel: MessageChannel ): Int = {
 		funcWorkers.get( funcName ) match {
@@ -113,16 +127,17 @@ class WorkerManager() {
 		if( presleep ) presleepWorkers += channel else presleepWorkers -= channel		
 	}
 	
-	def isPreSleep( channel: MessageChannel ) = presleepWorkers.contains( channel )
+	def isPreSleep( channel: MessageChannel ): Boolean = presleepWorkers.contains( channel )
 	
 	def setId( channel: MessageChannel, id: String ) {
 		workerIds += channel -> id
 	}
 	
-	def getId( channel: MessageChannel ) = workerIds.get( channel )
+	def getId( channel: MessageChannel ): Option[ String ] = workerIds.get( channel )		
 }
 
 class JobManager() {
+	private val jobQueueSize = new HashMap[String, Int ] 
 	/*all the pending jobs, mapping between [funcName, jobs ]*/	
 	private val pendingJobs = new HashMap[String, PriorityQueue[Job] ]
 	/*the submitted jobs by client, mapping between [client, [jobHandle, job ] ]*/ 
@@ -135,7 +150,11 @@ class JobManager() {
      *  
      * @param job the new job submitted	      
      */	     
-	def submitJob( job: Job ) {
+	def submitJob( job: Job ) : Boolean = {
+		
+		if( isQueueFull( job.funcName ) ) {
+			return false
+		} 
 		if( !pendingJobs.contains( job.funcName ) ) {
 			pendingJobs += job.funcName -> new PriorityQueue()( new JobPriorityOrdering )
 		}
@@ -146,7 +165,8 @@ class JobManager() {
 			submittedJobs += job.from -> new HashMap[ String, Job ]
 		}
 		
-		submittedJobs( job.from ) += job.jobHandle -> job 
+		submittedJobs( job.from ) += job.jobHandle -> job
+		true 
 	}
 	
 	def getJob( from: MessageChannel, jobHandle: String ): Option[ Job ] = {
@@ -233,6 +253,26 @@ class JobManager() {
 			
 		job
 	}
+	
+	def getAllJobs: List[ Job ] = {
+		var allJobs = List[Job]()
+		
+		submittedJobs.foreach{ channelJobs => 
+			channelJobs._2.foreach{ funcJobs => 
+				allJobs = allJobs :+ funcJobs._2 
+			} 
+		}
+		
+		allJobs 
+	}
+	
+	def getQueueSize( funcName: String ) : Int = if( jobQueueSize.contains( funcName ) ) jobQueueSize(funcName) else -1
+	
+	def setQueueSize( funcName: String, size: Int ) {
+		jobQueueSize += funcName -> size
+	}
+	
+	private def isQueueFull( funcName: String ) : Boolean = pendingJobs.contains( funcName ) && pendingJobs( funcName ).size < getQueueSize( funcName )
 		
 }
 
@@ -286,13 +326,14 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 			case WorkCompleteReq( jobHandle: String, data: String ) => handleWorkCompleteReq( from, jobHandle, data )
 			case PreSleep() => workers.setPreSleep( from, true )
 			case SetClientId( id ) => workers.setId( from, id )
-			case AdminRequest( command, args ) => handleAdminRequest( command, args )
+			case AdminRequest( command, args ) => handleAdminRequest( from, command, args )
 			case _ =>     
 		}
 	}
 	
 	def handleDisconnect( from: MessageChannel ) {
 		jobs.channelDisconnected( from )
+		workers.resetWorkerFunc( from )
 	}
 	
 	private def handleEchoReq( from: MessageChannel, data: String ) {
@@ -416,6 +457,56 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 		}})
 	}
 	
-	private def handleAdminRequest( command: String, args: List[ String ] ) {
+	private def handleAdminRequest( from: MessageChannel, command: String, args: List[ String ] ) {
+		var respLines = List[String]()					
+		command match {
+			case "workers" =>
+				
+				workers.getWorkers.foreach( worker => {
+					val sb = new StringBuilder
+					sb.append( "-1 ").append( worker.getAddress ).append( ' ')
+					sb.append( workers.getId( worker ).getOrElse( "-") )
+					sb.append( ":")
+					workers.getWorkerFuncs( worker ).getOrElse( scala.collection.Set[String]() ).foreach( funcName=> {
+						sb.append( ' ' ).append( funcName )
+					})
+					
+					respLines = respLines :+ sb.toString				
+				})
+				
+				respLines = respLines :+ "."
+			
+			case "maxqueue" =>
+				args.size match {
+					case 0 =>
+					case 1 => jobs.setQueueSize( args(0), -1 )
+					case _ => jobs.setQueueSize( args(0), args(1).toInt )
+				}
+				respLines = respLines :+ "OK"	
+			case "status" =>
+				var funcs = Set[ String ]()
+				val allJobs = jobs.getAllJobs
+				
+				allJobs.foreach { job => funcs = funcs + job.funcName }
+				
+				funcs = funcs ++ workers.getAllFunctions
+				
+				funcs.foreach { funcName =>
+					val sb = new StringBuilder
+					sb.append( funcName ).append( '\t')
+					val funcJobs = allJobs.filter( job => job.funcName == funcName )
+					val funcRunningJobs = funcJobs.filter( job => job.processing != null )
+					sb.append( funcJobs.size ).append( '\t')
+					sb.append( funcRunningJobs.size ).append( '\t')
+					sb.append( workers.getFuncWorkers( funcName ).getOrElse( new HashMap[MessageChannel, Int] ).size )
+					respLines = respLines :+ sb.toString					
+				}
+				respLines = respLines :+ "."				
+			case "shutdown" => println( "shutdown")
+			case "version" => respLines = respLines :+ "1.0"
+			case _ =>                                       
+		}
+		
+		if( respLines.size > 0 ) from.send( new AdminResponse( respLines ) )
 	} 
 }
