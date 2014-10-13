@@ -8,6 +8,7 @@ import java.nio.channels.{AsynchronousSocketChannel,
 						CompletionHandler}
 import java.net.{InetSocketAddress}
 
+
 trait JobCallback {
 	def data( data: String )
 	def warning( data: String )
@@ -17,8 +18,16 @@ trait JobCallback {
 	def exception( data: String )
 }
 
-class GearmanClient( server: String, port: Int ) {
+/**
+ *  construct a GearmanClient object
+ *                    
+ * @param servers the gearman server address list, the address list is in
+ * "server1:port,server2:port,...,servern:port"    
+ */ 
+class GearmanClient( servers: String ) {
 	import Array._
+	
+	val serverAddrs = parseServers
 	
 	var clientChannel:MessageChannel = null
 	val respCheckers = new LinkedList[ResponseChecker] 
@@ -71,9 +80,6 @@ class GearmanClient( server: String, port: Int ) {
 		def checkResponse( msg: Message ): ResponseCheckResult
 		
 	}
-	
-	
-	
 	
 	
 	def echo( data: String ):String = {
@@ -143,10 +149,18 @@ class GearmanClient( server: String, port: Int ) {
 	}
 	
 	def start {
-		clientChannel = AsyncSockMessageChannel.connect( new InetSocketAddress( server, port ) )
+
+		breakable {
+			while( true ) {		
+				for( i <- 0 until serverAddrs.size ) {
+					clientChannel = AsyncSockMessageChannel.connect( serverAddrs( i ) )
+					if( clientChannel != null ) break
+				}
+			}
+		}
+
 		clientChannel.setMessageHandler( new MessageHandler {
 			override def handleMessage( msg: Message, from: MessageChannel ) {
-				println( "check response message:" + msg )
 				doResponseCheck( msg )
 			}
 			
@@ -193,12 +207,28 @@ class GearmanClient( server: String, port: Int ) {
 			}
 			respCheckers.clear
 		}		
+	}
+	
+	private def parseServers = {
+		val addrs = servers.split( "," )
+		var serverAddrs = List[ InetSocketAddress ]()
+		addrs.foreach { addr =>
+			val index = addr.lastIndexOf( ':')
+			if( index != -1 ) {
+				try {
+					serverAddrs = serverAddrs :+ new InetSocketAddress( addr.substring( 0, index ), addr.substring( index + 1 ).toInt )
+				} catch {
+					case e:Throwable => e.printStackTrace
+				}
+			}
+		}
+		serverAddrs
 	} 
 }
 
 object GearmanClient {
 	def main( args: Array[String] ) {
-		val client = new GearmanClient( "127.0.0.1", 3333 )
+		val client = new GearmanClient( "127.0.0.1:3333,127.0.0.1:3334" )
 		client.start
 		println( client.echo( "test") )
 		
