@@ -35,7 +35,7 @@ object GearmanServer {
 	
 	def main( args: Array[String] ) {
 		//val server = GearmanServer( args(0), args(1).toInt )
-		val server = GearmanServer( "127.0.0.1", 3333 )
+		val server = GearmanServer( "0.0.0.0", 3333 )
 		server.start
 		while( true ) {
 			Thread.sleep( 1000 )

@@ -28,6 +28,20 @@ class MessageTest extends FunSpec with ShouldMatchers {
 			val msg = codecMessage( new CantDo( "func") )
 			msg.asInstanceOf[ CantDo ].funcName should be ("func")
 		}
+		
+		it( "AdminRequest codec") {
+			val msg = AdminRequest.parse( "command arg1 arg2 arg3")
+			
+			val adminReq = msg.asInstanceOf[AdminRequest]
+			
+			adminReq.command should be( "command" )
+			
+			adminReq.args.size should be (3)
+			
+			adminReq.args(0) should be ("arg1")
+			adminReq.args(1) should be ("arg2")
+			adminReq.args(2) should be ("arg3")
+		}
 	}
 	
 	private def codecMessage( msg: Message ): Message = {

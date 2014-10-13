@@ -44,8 +44,8 @@ object AdminRequest {
 		} else {
 			val command = words(0)
 			var args = List[String]()
-			for( i <- 1 to words.length ) {
-				args = words(i) :: args
+			for( i <- 1 until words.length ) {
+				args =args :+ words(i) 
 			}
 			new AdminRequest( command, args)
 		}

@@ -286,6 +286,7 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 			case WorkCompleteReq( jobHandle: String, data: String ) => handleWorkCompleteReq( from, jobHandle, data )
 			case PreSleep() => workers.setPreSleep( from, true )
 			case SetClientId( id ) => workers.setId( from, id )
+			case AdminRequest( command, args ) => handleAdminRequest( command, args )
 			case _ =>     
 		}
 	}
@@ -413,5 +414,8 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 				case _ =>
 			}
 		}})
+	}
+	
+	private def handleAdminRequest( command: String, args: List[ String ] ) {
 	} 
 }

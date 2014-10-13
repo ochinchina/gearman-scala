@@ -14,4 +14,5 @@ trait MessageChannel {
 	def send( msg:Message )       
 	def setMessageHandler( msgHandler: MessageHandler )
 	def isConnected: Boolean
+	def getAddress: String
 }

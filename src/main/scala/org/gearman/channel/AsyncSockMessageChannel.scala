@@ -14,64 +14,13 @@ import java.util.concurrent.{ExecutorService}
 import scala.util.control.Breaks._
 import org.gearman.message._
 
-class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends MessageChannel {
+class MessageBuffer {
 	import Array._
-	
+
 	var msgBuf = ofDim[Byte](1024*1024)
 	var msgBufLen = 0
-	var msgHandler: MessageHandler = null
-	var connected = true;
-	val channel = new AsynchronousSocketChannelWrapper( sockChannel )
 	
-	def start {
-		startRead
-	}
-	
-	def send( msg:Message ) {
-		val bos = new ByteArrayOutputStream
-		val dos = new DataOutputStream( bos )
-		println( "send " + msg )
-		msg.writeTo( dos )
-		
-		send( ByteBuffer.wrap( bos.toByteArray ) )
-	}
-	       
-	def setMessageHandler( msgHandler: MessageHandler ) {
-		this.msgHandler = msgHandler
-	}
-	
-	def isConnected: Boolean = connected
-	
-	private def send( buf: ByteBuffer ) {
-		channel.write( buf, null, new CompletionHandler[Integer, Void]{
-			def completed(bytesWritten: Integer, data: Void ) {				
-			}
-			
-			def failed(exc:Throwable, data: Void ) {
-			}
-		})
-	}
-	
-	private def startRead {
-		val buf = ByteBuffer.allocate(2048)
-		
-		channel.read( buf, null, new CompletionHandler[Integer, Void]{
-			def completed( bytesRead: Integer, data: Void ) {
-				buf.flip
-				if( bytesRead > 0 ) {
-					copyToMsgBuf( buf.array, bytesRead )
-					processMsgBuf
-				}
-				startRead
-			}
-			
-			def failed( exc: Throwable, data: Void ) {
-				handleDisconnect
-			}
-		})
-	}
-	
-	private def copyToMsgBuf( data: Array[Byte], len: Int ) {
+	def add( data: Array[Byte], len: Int ) {
 		if( (len + msgBufLen ) > msgBuf.length ) {
 			val tmp = ofDim[Byte]( msgBuf.length + len )
 			copy( msgBuf, 0, tmp, 0, msgBufLen )
@@ -85,29 +34,9 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 
 	}
 	
-	private def processMsgBuf() {
-		breakable {
-			while( msgBufLen > 0 ) {
-				if( msgBuf(0) == 0 ) {
-					if( !processBinMsgBuf ) break
-				} else {
-					if( !processAdminMsgBuf ) break
-				}
-			}
-		}
-	}
-	
-	private def processBinMsgBuf() =  {
-		var msg = extractMsg		
-		if( msg != null ) {
-			this.msgHandler.handleMessage( msg, this )
-			true
-		} else {
-			false
-		}
-	}
-	
-	private def extractMsg(): Message = {
+	def extractMsg: Message = if( msgBuf(0) == 0 ) extractBinMsg else extractAdminMsg
+		
+	private def extractBinMsg(): Message = {
 		var msg: Message = null
 		 
 		if( msgBufLen >= 12 ) {
@@ -129,41 +58,101 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		msg
 	}
 	
-	private def processAdminMsgBuf() = {
-		var msg = extractAdminMsg
-		
-		if( msg != null ) {
-			this.msgHandler.handleMessage( msg, this )
-			true
-		} else {
-			false
-		}		
-	}
 	
-	private def extractAdminMsg(): AdminRequest = {
+	private def extractAdminMsg(): Message = {
 		var msg: String = null
 		
 		var i = 0
 		breakable {
 			while( i < msgBufLen ) {
-				if( msgBuf(i) == '\n' ) {
-					break
-				} else {
-					i += 1
-				}
+				if( msgBuf(i) == '\n' ) break else i += 1
 			}
 		}
 		
 		if( i < msgBufLen ) {
+			i += 1
 			msg = new String( msgBuf, 0, i, "UTF-8" )
-			copy( msgBuf, 0, msgBuf, i, msgBufLen - i )
+			copy( msgBuf, i, msgBuf, 0, msgBufLen - i )
 			msgBufLen -= i
-			
-		}
-		
-		AdminRequest.parse( msg.trim )
+			AdminRequest.parse( msg.trim )			
+		} else null
 	}
 	
+	
+	
+}
+
+class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends MessageChannel {
+	
+	var msgBuf = new MessageBuffer
+	var msgHandler: MessageHandler = null
+	var connected = true;
+	val channel = new AsynchronousSocketChannelWrapper( sockChannel )
+	
+	def start {
+		startRead
+	}
+	
+	def send( msg:Message ) {
+		val bos = new ByteArrayOutputStream
+		val dos = new DataOutputStream( bos )
+		msg.writeTo( dos )
+		
+		send( ByteBuffer.wrap( bos.toByteArray ) )
+	}
+	       
+	def setMessageHandler( msgHandler: MessageHandler ) {
+		this.msgHandler = msgHandler
+	}
+	
+	def isConnected: Boolean = connected
+	
+	def getAddress: String = {
+		val remoteAddr = sockChannel.getRemoteAddress
+		
+		if( remoteAddr.isInstanceOf[ InetSocketAddress ] ) {
+			remoteAddr.asInstanceOf[ InetSocketAddress ].getAddress.getHostAddress
+		} else "not bound"
+	}
+	
+	private def send( buf: ByteBuffer ) {
+		channel.write( buf, null, new CompletionHandler[Integer, Void]{
+			def completed(bytesWritten: Integer, data: Void ) {				
+			}
+			
+			def failed(exc:Throwable, data: Void ) {
+			}
+		})
+	}
+	
+	private def startRead {
+		val buf = ByteBuffer.allocate(2048)
+		
+		channel.read( buf, null, new CompletionHandler[Integer, Void]{
+			def completed( bytesRead: Integer, data: Void ) {
+				buf.flip
+				if( bytesRead > 0 ) {
+					msgBuf.add( buf.array, bytesRead )
+					processMsgBuf
+				}
+				startRead
+			}
+			
+			def failed( exc: Throwable, data: Void ) {
+				handleDisconnect
+			}
+		})
+	}
+	
+	private def processMsgBuf {
+		breakable {
+			while( true ) {
+				val msg = msgBuf.extractMsg
+				if( msg == null ) break else msgHandler.handleMessage( msg, this )
+			}
+		} 
+	}
+		
 	private def handleDisconnect() {
 		connected = false
 		msgHandler.handleDisconnect( this )
@@ -195,7 +184,8 @@ object AsyncSockMessageChannel {
 				
 			}
 			
-			def failed( ex: Throwable , attachment:Void) {				
+			def failed( ex: Throwable , attachment:Void) {
+				connectedChannel.notifyValue( null )
 			}
 		})
 		connectedChannel.waitValue
