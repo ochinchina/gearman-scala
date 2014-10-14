@@ -119,13 +119,13 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		}
 	}
 	
-	def send( msg:Message ) {
+	def send( msg:Message, callback: Option[ Boolean => Unit ] = None ) {
 		val bos = new ByteArrayOutputStream
 		val dos = new DataOutputStream( bos )
 		msg.writeTo( dos )
 		
 		println( "send " + msg )
-		send( ByteBuffer.wrap( bos.toByteArray ) )
+		send( ByteBuffer.wrap( bos.toByteArray ), callback )
 	}
 	       
 	def setMessageHandler( msgHandler: MessageHandler ) {
@@ -142,12 +142,14 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		} else "not bound"
 	}
 	
-	private def send( buf: ByteBuffer ) {
+	private def send( buf: ByteBuffer, callback: Option[ Boolean => Unit ] ) {
 		channel.write( buf, null, new CompletionHandler[Integer, Void]{
-			def completed(bytesWritten: Integer, data: Void ) {				
+			def completed(bytesWritten: Integer, data: Void ) {
+				if( callback.nonEmpty) callback.get( true )				
 			}
 			
 			def failed(exc:Throwable, data: Void ) {
+				if( callback.nonEmpty ) callback.get( false )
 			}
 		})
 	}

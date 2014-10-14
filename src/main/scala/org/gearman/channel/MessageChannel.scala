@@ -24,14 +24,13 @@ import org.gearman.message._
 trait MessageHandler {
 	def handleMessage( msg: Message, from: MessageChannel )
 	def handleDisconnect( from: MessageChannel )
-	
-
 }
+
 
 trait MessageChannel {
 	def open
 	def close
-	def send( msg:Message )       
+	def send( msg:Message, callback: Option[ Boolean => Unit ] = None )       
 	def setMessageHandler( msgHandler: MessageHandler )
 	def isConnected: Boolean
 	def getAddress: String

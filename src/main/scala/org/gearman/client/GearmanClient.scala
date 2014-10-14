@@ -21,37 +21,130 @@ package org.gearman.client
 import org.gearman.message._
 import org.gearman.channel._
 import org.gearman.util.Util._
-import java.util.{ LinkedList }
+import java.util.{ LinkedList, Timer, TimerTask }
 import scala.util.control.Breaks._
 import java.nio.channels.{AsynchronousSocketChannel,
-						CompletionHandler}
-						
+						CompletionHandler }
+import java.util.concurrent.{Executors}
 import java.net.{InetSocketAddress}
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
-
+/**
+ * the job callback
+ * 
+ * @author Steven Ou  
+ */ 
 trait JobCallback {
+	/**
+	 * notify the callback data is received from the worker
+	 * 	 
+	 * @param data received from the worker
+	 *  
+	 */	 	
 	def data( data: String )
+	
+	/**
+	 * notify the callback warning is received from the worker
+	 * 	 
+	 * @param warning received from the worker
+	 *  
+	 */
 	def warning( data: String )
+	
+	/**
+	 * notify the callback job status is updated
+	 * 	 
+	 * @param numerator the complete percentage of numerator
+	 * @param denominator the complete percentage of denominator 
+	 */
 	def status( numerator: Int, denominator: Int )
-	def complete( data: String )
+	
+	/**
+	 * notify the callback job is completed
+	 * 	 
+	 * @param data received from the worker 
+	 */
+	def complete( data: String ) 
+	
+	/**
+	 * notify the callback job is failed
+	 * 	 
+	 */
 	def fail
+
+	/**
+	 * notify the callback exception occurs about the job
+	 * 	 
+	 */
 	def exception( data: String )
+	
+	/**
+	 * notify the callback connection is lost
+	 */
+	def connectionLost
+	
+	/**
+	 *  notify the callback the job is timeout
+	 */	 	
+	def timeout
+}
+
+class JobCallbackProxy( callback: JobCallback ) extends JobCallback {
+	override def data( data: String ) {
+		try { callback.data( data) } catch { case e: Throwable => }
+	}
+	
+	override def warning( data: String ) {
+		try { callback.warning( data) } catch { case e: Throwable => }
+	}
+	
+	override def status( numerator: Int, denominator: Int ) {
+		try { callback.status( numerator, denominator) } catch { case e: Throwable => }
+	}
+	
+	override def complete( data: String )  {
+		try { callback.complete( data ) } catch { case e: Throwable => }
+	}
+	
+	override def fail {
+		try { callback.fail } catch { case e: Throwable => }
+	}
+	
+	override def exception( data: String ) {
+		try { callback.exception( data ) } catch { case e: Throwable => }
+	}
+	
+	override def connectionLost {
+		try { callback.connectionLost } catch { case e: Throwable => }
+	}
+	
+	override def timeout {
+		try { callback.timeout } catch { case e: Throwable => }
+	} 
 }
 
 /**
  *  construct a GearmanClient object
  *                    
  * @param servers the gearman server address list, the address list is in
- * "server1:port,server2:port,...,servern:port"    
+ * "server1:port,server2:port,...,servern:port"
+ * @param maxOnGoingJobs the max number of jobs can be sent to gearman server
+ * 
+ * @param defMsgTimeout default message timeout in milliseconds      
  */ 
-class GearmanClient( servers: String ) {
+class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: Int = 10000 ) {
 	import Array._
 	
 	val serverAddrs = parseServers
 	
-	var clientChannel:MessageChannel = null
-	val respCheckers = new LinkedList[ResponseChecker] 
+	var clientChannel: MessageChannel = null	
+	val runningJobs = new LinkedList[JobInfo]
+	val pendingJobs = new LinkedList[JobInfo]
+	val executor = Executors.newFixedThreadPool( 1 )
+	val timer = new Timer 
 
+	case class JobInfo( msg: Message, timeout: Int, respChecker: ResponseChecker )
 	case class ResponseCheckResult( isMyResponse: Boolean, finished: Boolean )
 	
 	trait ResponseChecker {
@@ -80,8 +173,7 @@ class GearmanClient( servers: String ) {
 		
 	}
 	
-	abstract class AbsResponseChecker[T]( resp: Response[T]) extends ResponseChecker {
-		 		
+	abstract class AbsResponseChecker[T]( resp: Response[T]) extends ResponseChecker {		 		
 		override def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
 			if( connLost ) {
 				resp.connLost = true
@@ -102,10 +194,10 @@ class GearmanClient( servers: String ) {
 	}
 	
 	
-	def echo( data: String ):String = {
+	def echo( data: String, timeout: Option[Int] = None ):String = {
 		val resp = new Response[String]
 		
-		send( new EchoReq( data ), new AbsResponseChecker[String]( resp ) {
+		send( new EchoReq( data ), timeout.getOrElse( defMsgTimeout ), new AbsResponseChecker[String]( resp ) {
 			override def checkResponse( msg: Message ): ResponseCheckResult = {
 				msg match {
 					case EchoRes( respData ) =>
@@ -122,144 +214,152 @@ class GearmanClient( servers: String ) {
 	}
 		
 	
-	def submitJob( funcName: String, uid: String, data: String, callback: JobCallback ) {
-		val resp = new Response[String]
+	def submitJob( funcName: String, uid: String, data: String, callback: JobCallback, timeout: Option[Int] = None ) {
+		send( new SubmitJob( funcName, uid, data ), timeout.getOrElse( defMsgTimeout ), createJobResponseChecker( new JobCallbackProxy( callback ) ) )			
+	}
+
+	def start {
+		if( serverAddrs.size > 0 ) start( 0 )
+	}
+
+	private def start( index: Int ) {
+		if( index >= serverAddrs.size ) {
+			start( 0 )
+		} else {
+			val msgHandler = new MessageHandler {
+				override def handleMessage( msg: Message, from: MessageChannel ) {
+					future { doResponseCheck( msg ) }
+				}
+				
+				override def handleDisconnect( from: MessageChannel ) {
+					clientChannel = null
+					notifyConnectionLost
+					start( 0 )
+				}
+			}
+			
+			val callback = { channel: MessageChannel => 
+				if( channel != null ) {
+					clientChannel = channel
+					channel.setMessageHandler( msgHandler )
+					channel.open
+					sendPendingJobs
+				} else start( index + 1 ) 
+			}
+			
+			AsyncSockMessageChannel.asyncConnect( serverAddrs( index ), callback, Some( executor ) )			
+		}
+	}
+			
+	
+	private def createJobResponseChecker( callback: JobCallback )  =  new ResponseChecker {
+		@volatile
+		var thisJobHandle: String = null
 		
-		send( new SubmitJob( funcName, uid, data ), new AbsResponseChecker[String]( resp ) {
-			override def checkResponse( msg: Message ): ResponseCheckResult = {
-				msg match {
+		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
+			if( connLost ) {
+				callback.connectionLost
+				new ResponseCheckResult( true, true )
+			} else if( timeout ) {
+             	callback.timeout
+             	new ResponseCheckResult( true, true )
+            } else if( msg.isEmpty ) {
+				new ResponseCheckResult( false, false ) 
+			} else msg.get match {
 					case JobCreated( jobHandle ) =>
-						resp.value = jobHandle
+						thisJobHandle = jobHandle
 						new ResponseCheckResult( true, false )
 					case WorkDataRes( jobHandle, data ) =>
-						if( jobHandle == resp.value ) {
+						if( jobHandle == thisJobHandle ) {
 							callback.data( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )  
 					case WorkWarningRes( jobHandle, data ) =>
-						if( jobHandle == resp.value ) {
+						if( jobHandle == thisJobHandle ) {
 							callback.warning( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )
 					case WorkStatusRes( jobHandle, numerator, denominator ) =>
-						if( jobHandle == resp.value ) {
+						if( jobHandle == thisJobHandle ) {
 							callback.status( numerator, numerator )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )
 					case WorkCompleteRes( jobHandle, data ) =>
-					    if( jobHandle == resp.value ) {
+					    if( jobHandle == thisJobHandle ) {
 							callback.complete( data )
 							new ResponseCheckResult( true, true )
 						} else new ResponseCheckResult( false, false )
 					case WorkFailRes( jobHandle ) =>
-						if( jobHandle == resp.value ) {
+						if( jobHandle == thisJobHandle ) {
 							callback.fail
 							new ResponseCheckResult( true, true )
 						} else new ResponseCheckResult( false, false )
 					case WorkExceptionRes( jobHandle, data ) =>
-						if( jobHandle == resp.value ) {
+						if( jobHandle == thisJobHandle ) {
 							callback.exception( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false ) 	
 					case _ => new ResponseCheckResult( false, false )
 					
 				}
-			}
-		} )				
+		}
 	}
 	
-	def start {
+	private def sendPendingJobs {
+		if(  clientChannel != null && pendingJobs.size > 0 && ( maxOnGoingJobs <= 0 || runningJobs.size < maxOnGoingJobs ) ) {
+			val jobInfo = pendingJobs.removeFirst					
+			runningJobs.add( jobInfo )			
 
-		breakable {
-			while( true ) {		
-				for( i <- 0 until serverAddrs.size ) {
-					clientChannel = AsyncSockMessageChannel.connect( serverAddrs( i ) )
-					if( clientChannel != null ) break
-				}
-			}
+			clientChannel.send( jobInfo.msg, Some( success => {if( !success ) pendingJobs.add( jobInfo )} ) )
 		}
-
-		clientChannel.setMessageHandler( new MessageHandler {
-			override def handleMessage( msg: Message, from: MessageChannel ) {
-				doResponseCheck( msg )
-			}
-			
-			override def handleDisconnect( from: MessageChannel ) {
-				notifyConnectionLost
-				start
-			}
-		} )
-		clientChannel.open
 	}
 	
 	
-	
-	
-	private def send( msg: Message, respChecker: ResponseChecker  ) {
-		respCheckers.synchronized {
-			respCheckers.add( respChecker )
-		}
-		clientChannel.send( msg )
+	private def send( msg: Message, timeout:Int, respChecker: ResponseChecker  ) {
+		val jobInfo = new JobInfo( msg, timeout, respChecker )
+		executor.submit( new Runnable {
+			def run {
+				timer.schedule( new TimerTask {
+					def run {
+						executor.submit( new Runnable {
+							def run {
+								if( runningJobs.remove( jobInfo ) ) {
+									jobInfo.respChecker.checkResponse( None, false, true )
+								}
+							}
+						})
+					} 
+				}, timeout )
+				pendingJobs.add( jobInfo )
+				sendPendingJobs
+			}
+		})		
 	}
 	
 	private def doResponseCheck(msg:Message) {
-		respCheckers.synchronized {
-			val iter = respCheckers.iterator
-	
-			breakable {		
-				while( iter.hasNext ) {
-					val respChecker = iter.next
-					val checkResult = respChecker.checkResponse( Some( msg ), false, false )
-					if( checkResult.isMyResponse ) {
-						if( checkResult.finished ) respCheckers.remove( respChecker )
-						break
-					} 
+		breakable {
+			val iter = runningJobs.iterator	
+			while( iter.hasNext ) {
+				val jobInfo = iter.next
+				val checkResult = jobInfo.respChecker.checkResponse( Some( msg ), false, false )
+				if( checkResult.isMyResponse ) {
+					if( checkResult.finished ) runningJobs.remove( jobInfo )
+					break
 				}
 			}
 		}
-		
 	}
 	
 	private def notifyConnectionLost() {
-		respCheckers.synchronized {
-			val iter = respCheckers.iterator
-			while( iter.hasNext ) {
-				iter.next.checkResponse( None, true, false )
-			}
-			respCheckers.clear
-		}		
+		val iter = runningJobs.iterator
+		
+		while( iter.hasNext ) {
+			iter.next.respChecker.checkResponse( None, true, false )
+		}
+		runningJobs.clear
 	}
 	
 	private def parseServers = parseAddressList( servers )
 }
 
 
-object GearmanClient {
-	def main( args: Array[String] ) {
-		val client = new GearmanClient( "127.0.0.1:3333,127.0.0.1:3334" )
-		client.start
-		println( client.echo( "test") )
-		
-		client.submitJob( "test", "1234", "hello", new JobCallback {
-			def data( data: String ) {
-				println( "data:" + data )
-			}
-			def warning( data: String ) {
-			}
-			def status( numerator: Int, denominator: Int ) {
-			}
-			def complete( data: String ) {
-				println( "complete:" + data )
-				client.submitJob( "test", "12345", "hello", this )
-			}
-			def fail {
-			}
-			def exception( data: String ) {
-			}
-		})
-		
-		while( true ) {
-			Thread.sleep( 1000 )
-		}
-	}
-}
