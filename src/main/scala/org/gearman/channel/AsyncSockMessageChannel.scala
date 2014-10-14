@@ -189,6 +189,21 @@ object AsyncSockMessageChannel {
 		})
 	}
 	
+	def asyncConnect( sockAddr: SocketAddress, callback: ( MessageChannel)=>Unit, exectutor: Option[ExecutorService] = None ) {
+		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
+		
+		sockChannel.connect( sockAddr, null, new CompletionHandler[Void, Void] {
+			def completed( result:Void , attachment:Void  ) {				
+				callback( new AsyncSockMessageChannel( sockChannel ) )
+				
+			}
+			
+			def failed( ex: Throwable , attachment:Void) {
+				callback( null )
+			}
+		})
+	}
+	
 	def connect( sockAddr: SocketAddress, exectutor: Option[ExecutorService] = None ): MessageChannel  = {
 		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
 		val connectedChannel = new ValueNotifier[MessageChannel]

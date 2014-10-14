@@ -2,10 +2,12 @@ package org.gearman.client
 
 import org.gearman.message._
 import org.gearman.channel._
+import org.gearman.util.Util._
 import java.util.{ LinkedList }
 import scala.util.control.Breaks._
 import java.nio.channels.{AsynchronousSocketChannel,
 						CompletionHandler}
+						
 import java.net.{InetSocketAddress}
 
 
@@ -188,9 +190,10 @@ class GearmanClient( servers: String ) {
 	
 			breakable {		
 				while( iter.hasNext ) {
-					val checkResult = iter.next.checkResponse( Some( msg ), false, false )
+					val respChecker = iter.next
+					val checkResult = respChecker.checkResponse( Some( msg ), false, false )
 					if( checkResult.isMyResponse ) {
-						if( checkResult.finished ) iter.remove
+						if( checkResult.finished ) respCheckers.remove( respChecker )
 						break
 					} 
 				}
@@ -209,22 +212,9 @@ class GearmanClient( servers: String ) {
 		}		
 	}
 	
-	private def parseServers = {
-		val addrs = servers.split( "," )
-		var serverAddrs = List[ InetSocketAddress ]()
-		addrs.foreach { addr =>
-			val index = addr.lastIndexOf( ':')
-			if( index != -1 ) {
-				try {
-					serverAddrs = serverAddrs :+ new InetSocketAddress( addr.substring( 0, index ), addr.substring( index + 1 ).toInt )
-				} catch {
-					case e:Throwable => e.printStackTrace
-				}
-			}
-		}
-		serverAddrs
-	} 
+	private def parseServers = parseAddressList( servers )
 }
+
 
 object GearmanClient {
 	def main( args: Array[String] ) {
@@ -242,6 +232,7 @@ object GearmanClient {
 			}
 			def complete( data: String ) {
 				println( "complete:" + data )
+				client.submitJob( "test", "12345", "hello", this )
 			}
 			def fail {
 			}

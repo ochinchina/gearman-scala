@@ -1,7 +1,8 @@
-package org.gearman
+package org.gearman.worker
 
 import org.gearman.message._
 import org.gearman.channel._
+import org.gearman.util.Util._
 import scala.collection.mutable.{HashMap}
 import scala.util.control.Breaks._
 import java.net.InetSocketAddress
@@ -49,63 +50,78 @@ class DefWorkResponser( jobHandle: String, channel: MessageChannel ) extends Wor
 	}
 }
 
-class GearmanWorker( server: String, port: Int ) extends MessageHandler {
-	var channel: MessageChannel = null 
+class GearmanWorker( servers: String ) {
 	val funcHandlers = new HashMap[ String, WorkFuncHandler ]
-	
-	
+	val serverAddrs = parseAddressList( servers )
+	val channels = new java.util.LinkedList[MessageChannel]
+		
 	def registerHandler( funcName: String, handler: WorkFuncHandler ) {
-		funcHandlers += funcName -> handler
-		if( channel != null ) channel.send( new CanDo( funcName ) )
+		funcHandlers.synchronized { funcHandlers += funcName -> handler }
+		broadcast( new CanDo( funcName ) )
 	}
 	def unregisterHandler( funcName: String ) {
-		funcHandlers -= funcName
-		if( channel != null ) channel.send( new CantDo( funcName ) )
+		funcHandlers.synchronized { funcHandlers -= funcName }
+		broadcast( new CantDo( funcName ) )
 	}	
 	
-	def start() {
-		channel = AsyncSockMessageChannel.connect( new InetSocketAddress( server, port ) )
-		channel.setMessageHandler( this )
-		
-		funcHandlers.foreach( p => channel.send( new CanDo( p._1 ) ) )
-		
-		channel.start
-				
-		channel.send( new GrabJob )		
+	def start() {		
+		for( i <- 0 until serverAddrs.size ) start( serverAddrs( i ) )			
 	}
 	
-	override def handleMessage( msg: Message, from: MessageChannel ) {
-		msg match {
-			case JobAssign( jobHandle, funcName, data ) =>
-				funcHandlers.get( funcName ) match {
-					case Some( handler ) => 
-						handler.handle( jobHandle, funcName, data, None, new DefWorkResponser( jobHandle, channel ) )
-					case _ => 
-						channel.send( new Error( "2", "No handler found") )
-				}
-				channel.send( new GrabJob )
-			case JobAssignUniq( jobHandle, funcName, uid, data ) =>
-				funcHandlers.get( funcName ) match {
-					case Some( handler ) => 
-						handler.handle( jobHandle, funcName, data, Some( uid ), new DefWorkResponser( jobHandle, channel ) )
-					case _ => 
-						channel.send( new Error( "2", "No handler found") )
-				}
-				channel.send( new GrabJob )
-			case Noop() => channel.send( new GrabJob )
-			case NoJob() => channel.send( new PreSleep )																		
-			case _ => channel.send( new PreSleep )
-		} 
+	private def start( addr: InetSocketAddress ) {		
+		AsyncSockMessageChannel.asyncConnect( addr, channel => {
+			if( channel != null ) {
+				channels.synchronized { channels.add( channel ) }
+				channel.setMessageHandler( createMessageHandler( addr ) )
+				funcHandlers.synchronized { 		
+					funcHandlers.foreach( p => channel.send( new CanDo( p._1 ) ) )
+				}				
+				channel.start						
+				channel.send( new GrabJob )	
+			}
+		} )
 	}
 	
-	override def handleDisconnect( from: MessageChannel ) {
-		start
+	private def createMessageHandler( addr: InetSocketAddress ) = new MessageHandler {
+		override def handleMessage( msg: Message, from: MessageChannel ) {
+			msg match {
+				case JobAssign( jobHandle, funcName, data ) =>
+					funcHandlers.get( funcName ) match {
+						case Some( handler ) => handler.handle( jobHandle, funcName, data, None, new DefWorkResponser( jobHandle, from ) )
+						case _ => from.send( new Error( "2", "No handler found") )
+					}
+					from.send( new GrabJob )
+				case JobAssignUniq( jobHandle, funcName, uid, data ) =>
+					funcHandlers.get( funcName ) match {
+						case Some( handler ) => handler.handle( jobHandle, funcName, data, Some( uid ), new DefWorkResponser( jobHandle, from ) )
+						case _ => from.send( new Error( "2", "No handler found") )
+					}
+					from.send( new GrabJob )
+				case Noop() => from.send( new GrabJob )
+				case NoJob() => from.send( new PreSleep )																		
+				case _ => from.send( new PreSleep )
+			} 
+		}
+		
+		override def handleDisconnect( from: MessageChannel ) {
+			channels.synchronized { channels.remove( from ) }
+			start( addr )
+		}
 	}
+	
+	private def broadcast( msg: Message ) {
+		channels.synchronized {
+			val iter = channels.iterator
+			while( iter.hasNext ) {
+				iter.next.send( msg )
+			}
+		}
+	} 
 }
 
 object GearmanWorker {
 	def main( args: Array[String] ) {
-		val worker = new GearmanWorker( "127.0.0.1", 3333 )
+		val worker = new GearmanWorker( "127.0.0.1:3333,127.0.0.1:3334" )
 		worker.registerHandler( "test", new WorkFuncHandler {
 			def handle( jobHandle: String, 
 				funcName: String, 

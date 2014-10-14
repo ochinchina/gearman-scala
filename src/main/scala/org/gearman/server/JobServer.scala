@@ -221,6 +221,7 @@ class JobManager() {
 	}
 	
 	
+	def getJobCount( funcName: String ) = if( pendingJobs.contains( funcName ) )  pendingJobs( funcName ).size else 0
 	
 	def takeJob( funcName: String, channel: MessageChannel ): Option[ Job ] = {
 		var job: Option[ Job ] = None 
@@ -324,7 +325,10 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 			case WorkFailReq( jobHandle ) => handleWorkFailReq( from, jobHandle )
 			case WorkExceptionReq( jobHandle, data ) => handleWorkExceptionReq( from, jobHandle, data )
 			case WorkCompleteReq( jobHandle: String, data: String ) => handleWorkCompleteReq( from, jobHandle, data )
-			case PreSleep() => workers.setPreSleep( from, true )
+			case PreSleep() =>
+				workers.setPreSleep( from, true )
+				if( getPendingJobCountForWorker( from ) > 0 ) from.send( new Noop )
+				
 			case SetClientId( id ) => workers.setId( from, id )
 			case AdminRequest( command, args ) => handleAdminRequest( from, command, args )
 			case _ =>     
@@ -334,6 +338,16 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 	def handleDisconnect( from: MessageChannel ) {
 		jobs.channelDisconnected( from )
 		workers.resetWorkerFunc( from )
+	}
+	
+	private def getPendingJobCountForWorker( from: MessageChannel ) = {
+		var pending = 0
+		
+		workers.getWorkerFuncs( from ) match {
+			case Some( funcs ) => funcs.foreach{ funcName => pending += jobs.getJobCount( funcName ) }
+			case _ =>
+		}
+		pending 
 	}
 	
 	private def handleEchoReq( from: MessageChannel, data: String ) {
