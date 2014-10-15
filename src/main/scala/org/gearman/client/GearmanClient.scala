@@ -31,7 +31,8 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 
 /**
- * the job callback
+ * the job callback. When gearman client submits a job to gearman server, a job
+ * callback must be provided to receive job related data. 
  * 
  * @author Steven Ou  
  */ 
@@ -92,35 +93,35 @@ trait JobCallback {
 
 class JobCallbackProxy( callback: JobCallback ) extends JobCallback {
 	override def data( data: String ) {
-		try { callback.data( data) } catch { case e: Throwable => }
+		future { callback.data( data) }
 	}
 	
 	override def warning( data: String ) {
-		try { callback.warning( data) } catch { case e: Throwable => }
+		future { callback.warning( data) } 
 	}
 	
 	override def status( numerator: Int, denominator: Int ) {
-		try { callback.status( numerator, denominator) } catch { case e: Throwable => }
+		future { callback.status( numerator, denominator) } 
 	}
 	
 	override def complete( data: String )  {
-		try { callback.complete( data ) } catch { case e: Throwable => }
+		future { callback.complete( data ) } 
 	}
 	
 	override def fail {
-		try { callback.fail } catch { case e: Throwable => }
+		future { callback.fail } 
 	}
 	
 	override def exception( data: String ) {
-		try { callback.exception( data ) } catch { case e: Throwable => }
+		future { callback.exception( data ) } 
 	}
 	
 	override def connectionLost {
-		try { callback.connectionLost } catch { case e: Throwable => }
+		future { callback.connectionLost } 
 	}
 	
 	override def timeout {
-		try { callback.timeout } catch { case e: Throwable => }
+		try { callback.timeout } 
 	} 
 }
 
@@ -228,7 +229,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 		} else {
 			val msgHandler = new MessageHandler {
 				override def handleMessage( msg: Message, from: MessageChannel ) {
-					future { doResponseCheck( msg ) }
+					doResponseCheck( msg )
 				}
 				
 				override def handleDisconnect( from: MessageChannel ) {
@@ -238,7 +239,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 				}
 			}
 			
-			val callback = { channel: MessageChannel => 
+			val callback = { channel: MessageChannel =>
 				if( channel != null ) {
 					clientChannel = channel
 					channel.setMessageHandler( msgHandler )

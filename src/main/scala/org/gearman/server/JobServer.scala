@@ -23,17 +23,33 @@ import org.gearman.channel._
 import scala.collection.mutable.{HashMap,LinkedList,HashSet,PriorityQueue}
 import java.util.{UUID, Timer, TimerTask}
 import scala.util.control.Breaks.{breakable,break}
-import java.util.concurrent.{ExecutorService}
+import java.util.concurrent.{Executors, ExecutorService}
+import java.net.{SocketAddress, InetSocketAddress}
 
-
-
+/**
+ * Job priority
+ */ 
 object JobPriority extends Enumeration {
 	type JobPriority = Value
 	val Low, Normal, High = Value
 }
 
 
-
+/**
+ * presents a received job from the client and also job status will be saved
+ * to the job object
+ * 
+ * @param funcName function name of job
+ * @param jobHandle the assigned unique job handle by the job server
+ * @param uniqId the unique job identifier assigned by client
+ * @param data the job data from client
+ * @param priority the job priority(depends on the gearman message)
+ * @param background true if the job is a background job
+ * @param from the message channel(presents a client) which this job received from
+ * @param processing the processing message channel(presents a worker)
+ * @param numerator the worker reported completed percentage of numerator
+ * @param denominator the worker reported completed percentage of denominator              
+ */ 
 case class Job( funcName: String, 
 			jobHandle: String, 
 			uniqId: String, 
@@ -41,13 +57,25 @@ case class Job( funcName: String,
 			priority: JobPriority.JobPriority,
 			background: Boolean, 
 			from: MessageChannel,
-			var processing: MessageChannel,
+			var processing: MessageChannel = null,
 			var numerator: Int = 0,
 			var denominator: Int = 0  ) {
 }
 
+/**
+ * implement the Ordering required by scala PriorityQueue. It compares the order
+ * of two jobs, high priority have higher order 
+ */ 
 class JobPriorityOrdering extends Ordering[ Job ] {
-	def compare(job1: Job, job2: Job ) = {
+	/**
+	 * compare two jobs with their job priority.
+	 * 
+	 * @return -1 if job2 has higher priority than job1
+	 * 	 0 if two jobs have some priority
+	 * 	 1 if job1 has higher priority than job2	 
+	 * 	 	 	 
+	 */	 	
+	override def compare(job1: Job, job2: Job ) = {
 		job1.priority match {
 			case JobPriority.Low =>
 				job2.priority match {
@@ -72,6 +100,12 @@ class JobPriorityOrdering extends Ordering[ Job ] {
 }
 
 
+/**
+ * manage all the registered workers. After connecting to the gearman server, the
+ * worker will send CAN_DO or CAN_DO_TIMEOUT to the gearman server. Any peer can
+ * become a worker if it sends CAN_DO/CAN_DO_TIMEOUT to gearman server   
+ *
+ */  
 class WorkerManager() {
 	/* mapping between the function name and the worker message channel*/
 	private val funcWorkers = new HashMap[String, HashMap[ MessageChannel, Int ] ]
@@ -125,6 +159,11 @@ class WorkerManager() {
 	 */	 	
 	def getWorkers = workerFuncs.keySet
 	
+	/**
+	 *  get all the functions
+	 *  
+	 * @param all the registered functions	 	 
+	 */	 	
 	def getAllFunctions = funcWorkers.keySet  
 	
 	/**
@@ -134,6 +173,14 @@ class WorkerManager() {
 	 */	 	
 	def getFuncWorkers( funcName: String ): Option[ HashMap[MessageChannel, Int] ] =  funcWorkers.get( funcName )
 	
+	/**
+	 * get the timeout for function on the worker
+	 * 
+	 * @param funcName the function name
+	 * @param channel the worker message channel
+	 * 
+	 * @return the timeout, if > 0, the timeout is set, <=0, no timeout	 	 	 	 	 
+	 */	 	
 	def getTimeout( funcName: String, channel: MessageChannel ): Int = {
 		funcWorkers.get( funcName ) match {
 			case Some( channelTimeout ) =>  channelTimeout.get( channel ).getOrElse( 0 )
@@ -141,20 +188,62 @@ class WorkerManager() {
 		}
 	}
 
+	/**
+	 * change the worker channel to presleep state
+	 * 
+	 * @param channel the worker channel
+	 * @param presleep true if the worker enters preSleep state, false the worker
+	 * exits the preSleep state	 	 	 	 
+	 */	 	
 	def setPreSleep( channel: MessageChannel, presleep: Boolean ) {
 		if( presleep ) presleepWorkers += channel else presleepWorkers -= channel		
 	}
-	
+
+	/**
+	 * check if the worker channel is in presleep state or not
+	 * 
+	 * @param channel the worker channel
+	 * 
+	 * @return true the worker channel is in preSleep	 	 	 	 
+	 */	 		
 	def isPreSleep( channel: MessageChannel ): Boolean = presleepWorkers.contains( channel )
 	
+	/**
+	 * set the worker Client ID
+	 * 
+	 * @param channel the worker channel
+	 * @param the id set from the worker	  	 	 
+	 */	 	
 	def setId( channel: MessageChannel, id: String ) {
 		workerIds += channel -> id
 	}
+
+	/**
+	 * get the worker client ID
+	 * 
+	 * @param channel the worker channel
+	 * @return None no ID is set, non None the ID set by the worker	 	 	 
+	 */	 		
+	def getId( channel: MessageChannel ): Option[ String ] = workerIds.get( channel )
 	
-	def getId( channel: MessageChannel ): Option[ String ] = workerIds.get( channel )		
+	/**
+	 *  get all the worker channels
+	 */	 	
+	def getAllWorkerChannels = {
+		var channels = List[ MessageChannel ]()
+		
+		workerFuncs.foreach( workerFunc => channels = workerFunc._1 :: channels )
+		channels 
+	}		
 }
 
-class JobManager() {
+/**
+ * manages all the received jobs from the client. The job will be divided into 
+ * different categories: pending jobs, running jobs.  
+ *
+ */  
+class JobManager {
+	/*user set queue size for function, mapping between [funcName, queueSize]*/
 	private val jobQueueSize = new HashMap[String, Int ] 
 	/*all the pending jobs, mapping between [funcName, jobs ]*/	
 	private val pendingJobs = new HashMap[String, PriorityQueue[Job] ]
@@ -164,9 +253,12 @@ class JobManager() {
 	private val processingJobs = new HashMap[ MessageChannel, HashMap[ String, Job ] ]
 	
     /**
-     *  submit a new job
+     *  submit a new job to the manager
      *  
-     * @param job the new job submitted	      
+     * @param job the new job submitted
+     * 
+     * @return true if the job is submitted successfully, false if the job is failed
+     * to submit ( the job queue size is full for the function )	 	 	 	      
      */	     
 	def submitJob( job: Job ) : Boolean = {
 		
@@ -187,6 +279,14 @@ class JobManager() {
 		true 
 	}
 	
+	/**
+	 *  get the submitted and not finished job by the client channel and job handle
+	 *  
+	 * @param from the client channel
+	 * @param jobHandle the job handle assigned by server
+	 * 
+	 * @return a valid job if found otherwise a None is returned	 	 	 	 	   
+	 */	 	
 	def getJob( from: MessageChannel, jobHandle: String ): Option[ Job ] = {
 		submittedJobs.get( from ) match {
 			case Some( clientJobs ) => clientJobs.get( jobHandle )
@@ -194,6 +294,15 @@ class JobManager() {
 		}
 	}
 	
+	/**
+	 * get the processing job by the worker channel and the job handle
+	 * 
+	 * @param channel the worker channel
+	 * @param jobHandle the job handle assigned by server	 	 	 
+	 *
+	 * @return a valid job if the job is processing by the worker channel otherwise
+	 * a None is returned	 	 
+	 */	 	 	
 	def getProcessingJob( channel: MessageChannel, jobHandle: String ): Option[ Job ] = {
 		processingJobs.get( channel ) match {
 			case Some( jobs ) => 
@@ -203,6 +312,15 @@ class JobManager() {
 		}
 	}
 	
+	/**
+	 * a channel ( client channel or worker channel ) connection is lost.
+	 * If a client channel is connection lost, all non-background job will be
+	 * cleared.
+	 * If a worker channel is connection lost, all the jobs processed by this
+	 * worker will be re-submitted	 	 	 	 
+	 * 
+	 * @param channel the connection lost client/worker channel	 	 
+	 */	 	
 	def channelDisconnected( channel: MessageChannel ) {
 		if( !channel.isConnected ) {			
 			submittedJobs.get( channel ) match {
@@ -228,6 +346,11 @@ class JobManager() {
 		}
 	}
 	
+	/**
+	 * remove a job from the manager
+	 * 
+	 * @param job the job to be removed	 	 
+	 */	 	
 	def removeJob( job: Job ) {
 		if( submittedJobs.contains( job.from ) ) {
 			submittedJobs( job.from ) -= job.jobHandle
@@ -237,10 +360,25 @@ class JobManager() {
 			processingJobs( job.processing ) -= job.jobHandle
 		}
 	}
+
+	/**
+	 *  get the pending job count on function
+	 *  
+	 * @param funcName the function name of job
+	 * 
+	 * @return the number of pending jobs whose name are funcName	 	 	 	 
+	 */	 	
+	def getPendingJobCount( funcName: String ) = if( pendingJobs.contains( funcName ) )  pendingJobs( funcName ).size else 0
 	
-	
-	def getJobCount( funcName: String ) = if( pendingJobs.contains( funcName ) )  pendingJobs( funcName ).size else 0
-	
+	/**
+	 * take a job from pending queue by the function name and set its processing
+	 * channel to <code>channel</code> and remove it from the pending queue	 
+	 * 
+	 * @param funcName the job function name
+	 * @param channel the processing worker channel
+	 * 
+	 * @return the job processed by worker channel or None 	 	 	  	 	 
+	 */	 	
 	def takeJob( funcName: String, channel: MessageChannel ): Option[ Job ] = {
 		var job: Option[ Job ] = None 
 		try {
@@ -263,7 +401,17 @@ class JobManager() {
 		job
 	}
 	
-	def takeJob( funcs: scala.collection.Set[ String ], channel: MessageChannel ) :Option[ Job ] = {
+	/**
+	 * take a job from pending queue. The function name of job must be one
+	 * of name in funcs parameter. The processing channel will be set to
+	 * <code>channel</code>. The pending job will be removed from the pending queue 	 	 
+	 * 
+	 * @param funcs the function names
+	 * @param channel the worker channel
+	 * 
+	 * @return job whose function name is in funcs  	 	 	   	 	 
+	 */	 	
+	def takeJob( funcs: scala.collection.Set[ String ], channel: MessageChannel ):Option[ Job ] = {
 		var job: Option[ Job ] = None
 		
 		funcs.foreach{
@@ -273,6 +421,11 @@ class JobManager() {
 		job
 	}
 	
+	/**
+	 * get all the submitted & not finished jobs
+	 * 
+	 * @param all the submitted and not finished jobs 	 	 
+	 */
 	def getAllJobs: List[ Job ] = {
 		var allJobs = List[Job]()
 		
@@ -285,23 +438,85 @@ class JobManager() {
 		allJobs 
 	}
 	
+	/**
+	 *  get the number of all submitted & not finished jobs
+	 *  
+	 * @return the number of all submitted & not finished jobs	 	 
+	 */	 	
+	def getAllJobCount = {
+		var count = 0
+		submittedJobs.foreach( channelJobs => count += channelJobs._2.size )
+		count
+	}
+	
+	/**
+	 *  get all the client channels
+	 *  
+	 * @return all the client channels 	 	 
+	 */	 	
+	def getAllClientChannels = {
+		var channels = List[ MessageChannel ]()
+		
+		submittedJobs.foreach( channelJobs => channels = channelJobs._1 :: channels )
+		channels
+		
+	}
+	
+	/**
+	 * get the queue size limitation for function name 
+	 * 
+	 * @param funcName the function name 	 	 
+	 */
 	def getQueueSize( funcName: String ) : Int = if( jobQueueSize.contains( funcName ) ) jobQueueSize(funcName) else -1
 	
+	/**
+	 * set the queue limitation for the function name
+	 * 
+	 * @param funcName the function name
+	 * @param size the queue size	  	 	 
+	 */
 	def setQueueSize( funcName: String, size: Int ) {
 		jobQueueSize += funcName -> size
 	}
 	
+	/**
+	 *  check if the queue for funcName is full or not
+	 *  
+	 * @return true if the queue size reaches the limitation	 	 
+	 */	 	
 	private def isQueueFull( funcName: String ) : Boolean = pendingJobs.contains( funcName ) && pendingJobs( funcName ).size < getQueueSize( funcName )
 		
 }
 
-class JobServer( executor: ExecutorService ) extends MessageHandler {
+/**
+ * receive all the jobs from the clients and dispatch them to workers. Forward
+ * the job data got from the workers to the related client.
+ *
+ * @param executor thread pool used to handle job timeout  
+ *    
+ * @author Steven Ou   
+ */ 
+class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	private val workers = new WorkerManager
 	private val jobs = new JobManager
 	private val timer = new Timer
+	private val executor = Executors.newFixedThreadPool( 1 )
 	
+	@volatile
+	private var stopped = false
 	
-	def handleMessage( msg: Message, from: MessageChannel ) {
+	private val serverSockChannel = AsyncSockMessageChannel.accept( sockAddr, (channel:MessageChannel) => {
+				channel.setMessageHandler( this )
+				channel.open
+			}, Some( executor ) )
+		
+	/**
+	 *  handle the message received from the client or worker
+	 *  
+	 * @param msg the received gearman message
+	 * @param from the client or worker message channel	 	 	 
+	 */	 	
+	override def handleMessage( msg: Message, from: MessageChannel ) {
 		import Message._
 		
 		msg match {
@@ -310,30 +525,12 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 			case CantDo( funcName ) =>  handleCantDo( from, funcName )
 			case CanDoTimeout( funcName, timeout ) => handleCanDoTimeout( from, funcName, timeout )
 			case ResetAbilities() => handleResetAbilities( from )
-			case SubmitJob( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.Normal, false, from, null )  
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
-			case SubmitJobBg( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.Normal, true, from, null )  
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
-			case SubmitJobHigh( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.High, false, from, null )
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
-			case SubmitJobHighBg( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.High, true, from, null )
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
-			case SubmitJobLow( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.Low, false, from, null )
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
-			case SubmitJobLowBg( funcName, uniqId, data ) =>
-				val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, JobPriority.Low, true, from, null )
-				handleSubmitJob( from, job )
-				from.send( new JobCreated( job.jobHandle ) )
+			case SubmitJob( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.Normal, false )
+			case SubmitJobBg( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.Normal, true )
+			case SubmitJobHigh( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.High, false )
+			case SubmitJobHighBg( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.High, true )
+			case SubmitJobLow( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.Low, false )
+			case SubmitJobLowBg( funcName, uniqId, data ) => handleSubmitJob( from, funcName, uniqId, data, JobPriority.Low, true )
 			case GrabJob() => handleGrabJob( from, false )
 			case GrabJobUniq() => handleGrabJob( from, true )
 			case GetStatus( jobHandle ) => handleGetStatus( from, jobHandle )
@@ -353,16 +550,63 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 		}
 	}
 	
-	def handleDisconnect( from: MessageChannel ) {
+	/**
+	 *  If the the client/worker message channel is connection lost, this method will be called
+	 *
+	 * @param from the client/worker message channel	   	 
+	 */	 	
+	override def handleDisconnect( from: MessageChannel ) {
 		jobs.channelDisconnected( from )
 		workers.resetWorkerFunc( from )
+	}
+	
+	/**
+	 * shutdown the job server
+	 * 
+	 * @param graceful true do the graceful shutdown	 	 
+	 */	 	
+	private def shutdown( graceful: Boolean, callback: => Unit ) {
+		stopped = true
+				
+		executor.submit( new Runnable {
+			def run {
+				//close the listening socket
+				try { serverSockChannel.close } catch { case e:Throwable => }
+				
+				if( graceful ) doGracefulShutdownCheck( callback ) else {
+					closeAllChannels
+					callback
+				}
+			}
+		})		
+	}
+	
+	private def doGracefulShutdownCheck( callback: => Unit ) {
+		val periodicalChecker = new Runnable {
+			def run {
+				if( jobs.getAllJobCount == 0 ) {
+					closeAllChannels
+					callback
+				} else {
+					executor.submit( this )
+				}
+			}
+		}
+		
+		executor.submit( periodicalChecker )
+		
+	}
+	
+	private def closeAllChannels {
+		jobs.getAllClientChannels.foreach( channel => try { channel.close } catch { case e:Throwable => } )
+		workers.getAllWorkerChannels.foreach( channel => try { channel.close } catch { case e:Throwable => } )
 	}
 	
 	private def getPendingJobCountForWorker( from: MessageChannel ) = {
 		var pending = 0
 		
 		workers.getWorkerFuncs( from ) match {
-			case Some( funcs ) => funcs.foreach{ funcName => pending += jobs.getJobCount( funcName ) }
+			case Some( funcs ) => funcs.foreach{ funcName => pending += jobs.getPendingJobCount( funcName ) }
 			case _ =>
 		}
 		pending 
@@ -388,6 +632,14 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 		workers.resetWorkerFunc( from )
 	}
 	
+	private def handleSubmitJob( from: MessageChannel, funcName: String, uniqId: String, data:String, priority: JobPriority.JobPriority, background: Boolean ) {
+		if( !stopped ) {
+			val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, priority, background, from )		
+			handleSubmitJob( from, job )
+			from.send( new JobCreated( job.jobHandle ) )			
+		}
+		
+	}
 	private def handleSubmitJob( from: MessageChannel, job: Job )  {
 		jobs.submitJob( job )
 		workers.getFuncWorkers( job.funcName ) match {
@@ -534,11 +786,28 @@ class JobServer( executor: ExecutorService ) extends MessageHandler {
 					respLines = respLines :+ sb.toString					
 				}
 				respLines = respLines :+ "."				
-			case "shutdown" => println( "shutdown")
+			case "shutdown" =>
+				val graceful = args.size > 0 && args(0) == "graceful"
+				shutdown( graceful, System.exit( 0 ) ) 
 			case "version" => respLines = respLines :+ "1.0"
 			case _ =>                                       
 		}
 		
 		if( respLines.size > 0 ) from.send( new AdminResponse( respLines ) )
 	} 
+}
+
+object JobServer {
+	def apply( sockAddr: SocketAddress) = {
+		new JobServer( sockAddr ) 
+	}
+	
+	def apply( listeningAddr: String, port: Int ): JobServer = {
+		apply( new InetSocketAddress( listeningAddr, port ) );
+	}
+	
+	def apply( port: Int ): JobServer = {
+		apply( new InetSocketAddress( port ) );
+	}
+		
 }

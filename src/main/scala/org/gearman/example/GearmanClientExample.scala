@@ -41,6 +41,8 @@ object GearmanClientExample {
 			}
 			def complete( data: String ) {
 				println( "complete:" + data )
+				println( "complete, Thread---" + Thread.currentThread.getId )
+				
 				client.submitJob( "test", "12345", "hello", this )
 			}
 			def fail {

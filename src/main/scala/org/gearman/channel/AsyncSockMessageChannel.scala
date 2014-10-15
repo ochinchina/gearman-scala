@@ -32,12 +32,20 @@ import java.util.concurrent.{ExecutorService}
 import scala.util.control.Breaks._
 import org.gearman.message._
 
+/**
+ * manage the gearman message buffer
+ * 
+ * @author Steven Ou  
+ */ 
 class MessageBuffer {
 	import Array._
 
 	var msgBuf = ofDim[Byte](1024*1024)
 	var msgBufLen = 0
 	
+	/**
+	 *  add data to this buffer
+	 */	 	
 	def add( data: Array[Byte], len: Int ) {
 		if( (len + msgBufLen ) > msgBuf.length ) {
 			val tmp = ofDim[Byte]( msgBuf.length + len )
@@ -52,6 +60,9 @@ class MessageBuffer {
 
 	}
 	
+	/**
+	 *  extract gearman message from buffer
+	 */	 	
 	def extractMsg: Message = if( msgBuf(0) == 0 ) extractBinMsg else extractAdminMsg
 		
 	private def extractBinMsg(): Message = {
@@ -95,10 +106,13 @@ class MessageBuffer {
 			AdminRequest.parse( msg.trim )			
 		} else null
 	}
-	
-	
-	
 }
+
+/**
+ * MessageChannel implementation with socket
+ * 
+ * @author Steven Ou   
+ */ 
 
 class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends MessageChannel {
 	
@@ -203,7 +217,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 }
 
 object AsyncSockMessageChannel {
-	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: Option[ExecutorService] = None ) {
+	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: Option[ExecutorService] = None ) = {
 		val serverSock = if( exectutor.isEmpty ) AsynchronousServerSocketChannel.open() else AsynchronousServerSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
 		serverSock.bind( sockAddr )
 		serverSock.accept( null, new CompletionHandler[AsynchronousSocketChannel, Void]{
@@ -215,6 +229,7 @@ object AsyncSockMessageChannel {
 			def failed( ex: Throwable, data: Void ) {
 			}
 		})
+		serverSock
 	}
 	
 	def asyncConnect( sockAddr: SocketAddress, callback: ( MessageChannel)=>Unit, exectutor: Option[ExecutorService] = None ) {

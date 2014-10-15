@@ -209,7 +209,7 @@ class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted:
  * @author Steven Ou         
  */  
 class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
-	val funcHandlers = new HashMap[ String, JobHandler ]
+	val funcHandlers = new HashMap[ String, (JobHandler, Option[Int] ) ]
 	val serverAddrs = parseAddressList( servers )
 	val channels = new java.util.LinkedList[MessageChannel]
 	// all the on-going jobs
@@ -223,11 +223,15 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	 *  at any time	 
 	 *  
 	 * @param funcName the function name
-	 * @param handler the handler to process the function	  	 	 
+	 * @param handler the handler to process the function
+	 * @param optional timeout in seconds. If the timeout is provided, the worker
+	 * should finish the job whose function name is funcName within the timeout,
+	 * if the worker can't finish it within the timeout, the gearman server will
+	 * notify the client the job is failed 	 	  	 	 	  	 	 
 	 */	 		
-	def registerHandler( funcName: String, handler: JobHandler ) {
-		funcHandlers.synchronized { funcHandlers += funcName -> handler }
-		broadcast( new CanDo( funcName ) )
+	def registerHandler( funcName: String, handler: JobHandler, timeout: Option[Int] = None ) {
+		funcHandlers.synchronized { funcHandlers += funcName -> ( handler, timeout ) }
+		if( timeout.nonEmpty && timeout.get > 0 ) broadcast( CanDoTimeout( funcName, timeout.get ) ) else broadcast( new CanDo( funcName ) )
 	}
 	
 	/**
@@ -271,7 +275,15 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 				channels.synchronized { channels.add( channel ) }
 				channel.setMessageHandler( createMessageHandler( addr ) )
 				funcHandlers.synchronized { 		
-					funcHandlers.foreach( p => channel.send( new CanDo( p._1 ) ) )
+					funcHandlers.foreach( p => p match { 
+						case ( funcName, (handler, timeout ) ) =>
+							if( timeout.nonEmpty && timeout.get > 0 ) 
+								channel.send( new CanDoTimeout( funcName, timeout.get ) ) 
+							else channel.send( new CanDo( funcName ) )
+						case _ =>
+						}						 
+					)
+					
 				}				
 				channel.open
 				grabJob( channel )						
@@ -299,7 +311,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	private def handleJob( from: MessageChannel, jobHandle: String, funcName: String, data: String, uid: Option[String] ) {
 		funcHandlers.synchronized {
 			funcHandlers.get( funcName ) match {
-				case Some( handler ) => 
+				case Some( (handler, timeout) ) => 
 					jobs.addJob( jobHandle, from )
 					val completeCb = { handleJobCompleted( from, jobHandle ) }					
 					future { handler.handle( jobHandle, funcName, data, uid, new DefJobResponser( jobHandle, from, completeCb ) ) }
