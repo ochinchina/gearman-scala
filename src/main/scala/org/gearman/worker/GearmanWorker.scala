@@ -25,6 +25,7 @@ import org.gearman.util.Util._
 import scala.collection.mutable.{HashMap}
 import scala.util.control.Breaks._
 import java.net.InetSocketAddress
+import java.util.concurrent.{Executors}
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 
@@ -53,7 +54,7 @@ trait JobResponser {
 	 * send a warning data to client
 	 * 
 	 * @param data the warning data	 	 
-	 */	 	
+	 */	 		 
 	def warning( data: String )
 	
 	/**
@@ -115,11 +116,9 @@ class JobList {
 	 * @param channel the message channel of gearman server	 	 	 
 	 */	 	
 	def addJob( jobHandle: String, channel: MessageChannel ) {
-		jobs.synchronized { 
-			jobs += jobHandle -> channel
-			if( !channelJobs.contains( channel ) ) channelJobs += channel -> new java.util.LinkedList[ String ]
-			channelJobs( channel ).add( jobHandle )
-		}
+		jobs += jobHandle -> channel
+		if( !channelJobs.contains( channel ) ) channelJobs += channel -> new java.util.LinkedList[ String ]
+		channelJobs( channel ).add( jobHandle )
 	}
 	
 	/**
@@ -128,13 +127,11 @@ class JobList {
 	 * @param jobHandle the job handle	 	 
 	 */	 	
 	def removeJob( jobHandle: String ) {
-		jobs.synchronized {
-			val channel = jobs.get( jobHandle ) 
-			jobs -= jobHandle
-			if( channel.nonEmpty && channelJobs.contains( channel.get ) ) {
-				channelJobs( channel.get ).remove( jobHandle )
-				if( channelJobs( channel.get ).isEmpty ) channelJobs -= channel.get
-			}
+		val channel = jobs.get( jobHandle ) 
+		jobs -= jobHandle
+		if( channel.nonEmpty && channelJobs.contains( channel.get ) ) {
+			channelJobs( channel.get ).remove( jobHandle )
+			if( channelJobs( channel.get ).isEmpty ) channelJobs -= channel.get
 		}
 	}
 	
@@ -143,14 +140,14 @@ class JobList {
 	 *  
 	 * @return the number of total jobs	 	 
 	 */	 	
-	def size = jobs.synchronized{ jobs.size }
+	def size = jobs.size
 
 	/**
 	 *  get the number of jobs on the gearman server channel
 	 *  
 	 * @param channel the gearman server channel	 	 
 	 */	 		
-	def size( channel: MessageChannel ) = jobs.synchronized {
+	def size( channel: MessageChannel ) = {
 		if( channelJobs.contains( channel ) ) channelJobs( channel ).size else 0
 	} 
 
@@ -169,30 +166,30 @@ class JobList {
 class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted: =>Unit ) extends JobResponser {
 
 	override def data( data: String ) {
-		channel.send( new WorkDataReq( jobHandle, data ) )
+		channel.send( WorkDataReq( jobHandle, data ) )
 	}
 	
 	override def status( numerator: Int, denominator: Int ) {
-		channel.send( new WorkStatusReq( jobHandle, numerator, denominator ) )
+		channel.send( WorkStatusReq( jobHandle, numerator, denominator ) )
 	}
 	
 	override def complete( data: String ) {
 		jobCompleted
-		channel.send( new WorkCompleteReq( jobHandle, data ) )
+		channel.send( WorkCompleteReq( jobHandle, data ) )
 	}
 	
 	override def warning( data: String ) {
-		channel.send( new WorkWarningReq( jobHandle, data ) )
+		channel.send( WorkWarningReq( jobHandle, data ) )
 	}
 	
 	override def fail {
 		jobCompleted
-		channel.send( new WorkFailReq( jobHandle ) )
+		channel.send( WorkFailReq( jobHandle ) )
 	}
 	
 	override def exception( data: String ) {
 		jobCompleted
-		channel.send( new WorkExceptionReq( jobHandle, data ) )
+		channel.send( WorkExceptionReq( jobHandle, data ) )
 	}
 }
 
@@ -214,6 +211,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	val channels = new java.util.LinkedList[MessageChannel]
 	// all the on-going jobs
 	val jobs = new JobList
+	val executor = Executors.newFixedThreadPool( 1 )
 
 	@volatile	
 	var stopped = false
@@ -230,8 +228,12 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	 * notify the client the job is failed 	 	  	 	 	  	 	 
 	 */	 		
 	def registerHandler( funcName: String, handler: JobHandler, timeout: Option[Int] = None ) {
-		funcHandlers.synchronized { funcHandlers += funcName -> ( handler, timeout ) }
-		if( timeout.nonEmpty && timeout.get > 0 ) broadcast( CanDoTimeout( funcName, timeout.get ) ) else broadcast( new CanDo( funcName ) )
+		executor.submit( new Runnable {
+			def run {
+				funcHandlers += funcName -> ( handler, timeout )
+				if( timeout.nonEmpty && timeout.get > 0 ) broadcast( CanDoTimeout( funcName, timeout.get ) ) else broadcast( CanDo( funcName ) )
+			}
+		})
 	}
 	
 	/**
@@ -240,8 +242,12 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	 * @param funcName the function name
 	 */	
 	def unregisterHandler( funcName: String ) {
-		funcHandlers.synchronized { funcHandlers -= funcName }
-		broadcast( new CantDo( funcName ) )
+		executor.submit( new Runnable {
+			def run {
+				funcHandlers -= funcName
+				broadcast( CantDo( funcName ) )
+			}
+		})
 	}	
 	
 	/**
@@ -259,12 +265,16 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	 */	 	
 	def shutdown( graceful: Boolean ) {
 		stopped = true
-		if( !graceful ) channels.synchronized {
-			val iter = channels.iterator
-			while( iter.hasNext ) try { iter.next.close } catch { case e: Throwable => }
-			channels.clear 
-		} 
-		
+		executor.submit( new Runnable {
+			def run {
+				if( graceful ) {
+				} else {
+					val iter = channels.iterator
+					while( iter.hasNext ) try { iter.next.close } catch { case e: Throwable => }
+					channels.clear 
+				} 
+			}
+		})
 	}
 	
 	private def start( addr: InetSocketAddress ) {		
@@ -272,23 +282,21 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 			if( channel == null ) {
 				start( addr )
 			} else {
-				channels.synchronized { channels.add( channel ) }
-				channel.setMessageHandler( createMessageHandler( addr ) )
-				funcHandlers.synchronized { 		
-					funcHandlers.foreach( p => p match { 
-						case ( funcName, (handler, timeout ) ) =>
+				executor.submit( new Runnable {
+					def run {
+						channels.add( channel ) 
+						channel.setMessageHandler( createMessageHandler( addr ) )
+						funcHandlers.foreach{ case ( funcName, ( handler, timeout ) ) => 
 							if( timeout.nonEmpty && timeout.get > 0 ) 
-								channel.send( new CanDoTimeout( funcName, timeout.get ) ) 
-							else channel.send( new CanDo( funcName ) )
-						case _ =>
-						}						 
-					)
-					
-				}				
-				channel.open
-				grabJob( channel )						
+								channel.send( CanDoTimeout( funcName, timeout.get ) ) 
+							else channel.send( CanDo( funcName ) )
+						}						 										
+						channel.open
+						grabJob( channel )						
+					}
+				} )
 			}
-		} )
+		}, Some( executor ) )
 	}
 	
 	private def createMessageHandler( addr: InetSocketAddress ) = new MessageHandler {
@@ -297,26 +305,24 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 				case JobAssign( jobHandle, funcName, data ) => handleJob( from, jobHandle, funcName, data, None )
 				case JobAssignUniq( jobHandle, funcName, uid, data ) => handleJob( from, jobHandle, funcName, data, Some( uid ) )
 				case Noop() => grabJob( from )
-				case NoJob() => from.send( new PreSleep )																		
-				case _ => from.send( new PreSleep )
+				case NoJob() => from.send( PreSleep() )																		
+				case _ => from.send( PreSleep() )
 			} 
 		}
 		
 		override def handleDisconnect( from: MessageChannel ) {
-			channels.synchronized { channels.remove( from ) }
+			channels.remove( from )
 			start( addr )
 		}
 	}
 	
 	private def handleJob( from: MessageChannel, jobHandle: String, funcName: String, data: String, uid: Option[String] ) {
-		funcHandlers.synchronized {
-			funcHandlers.get( funcName ) match {
-				case Some( (handler, timeout) ) => 
-					jobs.addJob( jobHandle, from )
-					val completeCb = { handleJobCompleted( from, jobHandle ) }					
-					future { handler.handle( jobHandle, funcName, data, uid, new DefJobResponser( jobHandle, from, completeCb ) ) }
-				case _ => from.send( new Error( "2", "No handler found") )
-			}
+		funcHandlers.get( funcName ) match {
+			case Some( (handler, timeout) ) => 
+				jobs.addJob( jobHandle, from )
+				val completeCb = { handleJobCompleted( from, jobHandle ) }					
+				future { handler.handle( jobHandle, funcName, data, uid, new DefJobResponser( jobHandle, from, completeCb ) ) }
+			case _ => from.send( Error( "2", "No handler found") )
 		}
 		
 		grabJob( from )
@@ -331,15 +337,14 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	}
 	
 	private def grabJob( channel: MessageChannel ) {
-		if( maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) channel.send( new GrabJob ) else channel.send( new PreSleep )
+		if( maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) channel.send( GrabJob() ) else channel.send( PreSleep() )
 	}
 	
-	private def broadcast( msg: Message ) {
-		channels.synchronized {
-			val iter = channels.iterator
-			while( iter.hasNext ) {
-				iter.next.send( msg )
-			}
+	private def broadcast( msg: Message ) {		
+		val iter = channels.iterator
+		while( iter.hasNext ) {
+			iter.next.send( msg )
 		}
+		
 	} 
 }

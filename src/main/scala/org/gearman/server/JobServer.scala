@@ -541,7 +541,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 			case WorkCompleteReq( jobHandle: String, data: String ) => handleWorkCompleteReq( from, jobHandle, data )
 			case PreSleep() =>
 				workers.setPreSleep( from, true )
-				if( getPendingJobCountForWorker( from ) > 0 ) from.send( new Noop )
+				if( getPendingJobCountForWorker( from ) > 0 ) from.send( Noop() )
 				
 			case SetClientId( id ) => workers.setId( from, id )
 			case AdminRequest( command, args ) => handleAdminRequest( from, command, args )
@@ -618,7 +618,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	}
 	
 	private def handleEchoReq( from: MessageChannel, data: String ) {
-		from.send( new EchoRes( data ) )
+		from.send( EchoRes( data ) )
 	}
 	
 	private def handleCanDo( from: MessageChannel, funcName: String ) {
@@ -639,9 +639,9 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	
 	private def handleSubmitJob( from: MessageChannel, funcName: String, uniqId: String, data:String, priority: JobPriority.JobPriority, background: Boolean ) {
 		if( !stopped ) {
-			val job = new Job( funcName, UUID.randomUUID.toString, uniqId, data, priority, background, from )		
+			val job = Job( funcName, UUID.randomUUID.toString, uniqId, data, priority, background, from )		
 			handleSubmitJob( from, job )
-			from.send( new JobCreated( job.jobHandle ) )			
+			from.send( JobCreated( job.jobHandle ) )			
 		}
 		
 	}
@@ -651,7 +651,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 			case Some( channels ) => 
 				channels.foreach{ case ( channel, timeout ) =>
 					if( workers.isPreSleep( channel ) ) {
-						channel.send( new Noop )
+						channel.send( Noop() )
 					}  
 				}
 			case _ =>
@@ -666,34 +666,34 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 					case Some( job ) =>
 						workers.setPreSleep( from, false ) 
 						if( uniq )
-							from.send( new JobAssignUniq( job.jobHandle, job.funcName, job.uniqId, job.data ) )
-						else from.send( new JobAssign( job.jobHandle, job.funcName, job.data ) )
+							from.send( JobAssignUniq( job.jobHandle, job.funcName, job.uniqId, job.data ) )
+						else from.send( JobAssign( job.jobHandle, job.funcName, job.data ) )
 						val timeout = workers.getTimeout( job.funcName, from )
 						if( timeout > 0 ) timer.schedule( new TimerTask { def run { handleTimeout( from, job.jobHandle ) } }, timeout * 1000 )
-					case _ =>  from.send( new NoJob() )
+					case _ =>  from.send( NoJob() )
 				}
 				
-			case _ => from.send( new NoJob() )
+			case _ => from.send( NoJob() )
 		}
 	}
 	
 	private def handleGetStatus( from: MessageChannel, jobHandle: String ) {
 		jobs.getJob( from, jobHandle ) match {
-			case Some( job ) => from.send( new StatusRes( jobHandle, false, if( job.processing != null ) true else false, job.numerator, job.denominator ) )
-			case _ => from.send( new StatusRes( jobHandle, true, false, 0, 0 ) )
+			case Some( job ) => from.send( StatusRes( jobHandle, false, if( job.processing != null ) true else false, job.numerator, job.denominator ) )
+			case _ => from.send( StatusRes( jobHandle, true, false, 0, 0 ) )
 		}
 	}
 	
 	private def handleWorkDataReq( from: MessageChannel, jobHandle: String, data: String ) {
 		jobs.getProcessingJob( from, jobHandle ) match {
-			case Some( job ) => if( !job.background ) job.from.send( new WorkDataRes( jobHandle, data ) )
+			case Some( job ) => if( !job.background ) job.from.send( WorkDataRes( jobHandle, data ) )
 			case _ =>
 		}
 	}
 	
 	private def handleWorkWarningReq( from: MessageChannel, jobHandle: String, data: String ) {
 		jobs.getProcessingJob( from, jobHandle ) match {
-			case Some( job ) => if( !job.background ) job.from.send( new WorkWarningRes( jobHandle, data ) )
+			case Some( job ) => if( !job.background ) job.from.send( WorkWarningRes( jobHandle, data ) )
 			case _ =>
 		}
 	}
@@ -703,7 +703,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 			case Some( job ) =>
 				job.numerator = numerator
 				job.denominator = denominator 
-				if( !job.background ) job.from.send( new WorkStatusRes( jobHandle, numerator, denominator ) )
+				if( !job.background ) job.from.send( WorkStatusRes( jobHandle, numerator, denominator ) )
 			case _ =>
 		}
 	}
@@ -711,7 +711,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	private def handleWorkFailReq( from: MessageChannel, jobHandle: String ) {
 		jobs.getProcessingJob( from, jobHandle ) match {
 			case Some( job ) => 
-				if( !job.background ) job.from.send( new WorkFailRes( jobHandle ) )
+				if( !job.background ) job.from.send( WorkFailRes( jobHandle ) )
 				jobs.removeJob( job )
 			case _ =>
 		}
@@ -720,7 +720,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	private def handleWorkExceptionReq( from: MessageChannel, jobHandle: String, data: String ) {
 		jobs.getProcessingJob( from, jobHandle ) match {
 			case Some( job ) => 
-				if( !job.background ) job.from.send( new WorkExceptionRes( jobHandle, data ) )
+				if( !job.background ) job.from.send( WorkExceptionRes( jobHandle, data ) )
 				jobs.removeJob( job )
 			case _ =>
 		}
@@ -729,7 +729,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	private def handleWorkCompleteReq( from: MessageChannel, jobHandle: String, data: String ) {
 		jobs.getProcessingJob( from, jobHandle ) match {
 			case Some( job ) => 
-				if( !job.background ) job.from.send( new WorkCompleteRes( jobHandle, data ) )
+				if( !job.background ) job.from.send( WorkCompleteRes( jobHandle, data ) )
 				jobs.removeJob( job )
 			case _ =>
 		}
@@ -739,7 +739,7 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 		executor.submit( new Runnable { def run {
 			jobs.getProcessingJob( processingChannel, jobHandle ) match {
 				case Some( job ) => 
-					if( !job.background ) job.from.send( new WorkFailRes( jobHandle ) )
+					if( !job.background ) job.from.send( WorkFailRes( jobHandle ) )
 					jobs.removeJob( job )
 				case _ =>
 			}
@@ -798,21 +798,14 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 			case _ =>                                       
 		}
 		
-		if( respLines.size > 0 ) from.send( new AdminResponse( respLines ) )
+		if( respLines.size > 0 ) from.send( AdminResponse( respLines ) )
 	} 
 }
 
 object JobServer {
-	def apply( sockAddr: SocketAddress) = {
-		new JobServer( sockAddr ) 
-	}
+	def apply( sockAddr: SocketAddress) = new JobServer( sockAddr )
 	
-	def apply( listeningAddr: String, port: Int ): JobServer = {
-		apply( new InetSocketAddress( listeningAddr, port ) );
-	}
+	def apply( listeningAddr: String, port: Int ) = new JobServer( new InetSocketAddress( listeningAddr, port ) )
 	
-	def apply( port: Int ): JobServer = {
-		apply( new InetSocketAddress( port ) );
-	}
-		
+	def apply( port: Int ) = new JobServer( new InetSocketAddress( port ) )		
 }
