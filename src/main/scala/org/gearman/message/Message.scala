@@ -26,6 +26,13 @@ import java.io.{InputStream,
 			ByteArrayOutputStream,
 			IOException}
 
+/**
+ * Job priority
+ */ 
+object JobPriority extends Enumeration {
+	type JobPriority = Value
+	val Low, Normal, High = Value
+}
 
 /**
  * represents a message concept in the Gearman protocol

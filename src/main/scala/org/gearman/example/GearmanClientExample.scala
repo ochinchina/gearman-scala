@@ -27,11 +27,14 @@ object GearmanClientExample {
 			printUsage
 			return
 		}
-		val client = new GearmanClient( args( 0 ) )
-		client.start
+		val client = GearmanClient( args( 0 ) )
 		println( client.echo( "test") )
 		
-		client.submitJob( "test", "1234", "hello", new JobCallback {
+		client.asyncSubmitJob( "test", 
+				"1234", 
+				"hello",
+				Some( jobHandle => println( "job created:" + jobHandle ) ),
+				Some( new JobCallback {
 			def data( data: String ) {
 				println( "data:" + data )
 			}
@@ -43,23 +46,23 @@ object GearmanClientExample {
 				println( "complete:" + data )
 				println( "complete, Thread---" + Thread.currentThread.getId )
 				
-				client.submitJob( "test", "12345", "hello", this )
+				client.asyncSubmitJob( "test", "12345", "hello", Some( jobHandle => println( "job created:" + jobHandle ) ), Some( this ) )
 			}
 			def fail {
-				client.submitJob( "test", "12345", "hello", this )
+				client.asyncSubmitJob( "test", "12345", "hello", Some( jobHandle => println( "job created:" + jobHandle ) ), Some( this ) )
 			}
 			def exception( data: String ) {
-				client.submitJob( "test", "12345", "hello", this )
+				client.asyncSubmitJob( "test", "12345", "hello", Some( jobHandle => println( "job created:" + jobHandle ) ), Some( this ) )
 			}
 			
 			def timeout {
-				client.submitJob( "test", "12345", "hello", this )
+				client.asyncSubmitJob( "test", "12345", "hello", Some( jobHandle => println( "job created:" + jobHandle ) ), Some( this ) )
 			}
 			
 			def connectionLost {
-				client.submitJob( "test", "12345", "hello", this )
+				client.asyncSubmitJob( "test", "12345", "hello", Some( jobHandle => println( "job created:" + jobHandle ) ), Some( this ) )
 			}
-		})
+		}) )
 		
 		while( true ) {
 			Thread.sleep( 1000 )

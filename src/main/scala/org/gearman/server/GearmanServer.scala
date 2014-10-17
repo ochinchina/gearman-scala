@@ -21,10 +21,18 @@ package org.gearman.server
 
 object GearmanServer {
 	def main( args: Array[String] ) {
-		val server = JobServer( args(0), args(1).toInt )
+		args.length match {
+			case 0 => printUsage; System.exit( 0 )
+			case 1 => JobServer( args(0).toInt )
+			case _ => JobServer( args(0), args(1).toInt )
+		}
 		while( true ) {
 			Thread.sleep( 1000 )
 		}
+	}
+	
+	private def printUsage {
+		println( "Usage: java -classpath <classpath> org.gearman.server.GearmanServer [<listening ip address>] <port>")
 	}
 }
 

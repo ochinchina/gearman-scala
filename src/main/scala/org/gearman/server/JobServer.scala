@@ -26,14 +26,6 @@ import scala.util.control.Breaks.{breakable,break}
 import java.util.concurrent.{Executors, ExecutorService}
 import java.net.{SocketAddress, InetSocketAddress}
 
-/**
- * Job priority
- */ 
-object JobPriority extends Enumeration {
-	type JobPriority = Value
-	val Low, Normal, High = Value
-}
-
 
 /**
  * presents a received job from the client and also job status will be saved
@@ -232,7 +224,9 @@ class WorkerManager() {
 	def getAllWorkerChannels = {
 		var channels = List[ MessageChannel ]()
 		
-		workerFuncs.foreach( workerFunc => channels = workerFunc._1 :: channels )
+		workerFuncs.foreach{ case (workerChannel, _) => 
+			channels = workerChannel :: channels 
+		}
 		channels 
 	}		
 }
@@ -325,8 +319,10 @@ class JobManager {
 		if( !channel.isConnected ) {			
 			submittedJobs.get( channel ) match {
 				case Some( jobs ) =>
-					jobs.filterNot{ p => p._2.background }.foreach {
-						submittedJobs( channel ) -= _._1 
+					jobs.filterNot{ case (jobHandle, job ) => 
+						job.background 
+					}.foreach { case (jobHandle, _ ) =>
+						submittedJobs( channel ) -= jobHandle 
 					}
 				case _ =>
 			}
@@ -414,8 +410,8 @@ class JobManager {
 	def takeJob( funcs: scala.collection.Set[ String ], channel: MessageChannel ):Option[ Job ] = {
 		var job: Option[ Job ] = None
 		
-		funcs.foreach{
-			( funcName: String ) => if( job.isEmpty ) job = takeJob( funcName, channel )
+		funcs.foreach{ case (funcName) =>
+			if( job.isEmpty ) job = takeJob( funcName, channel )
 		}
 			
 		job
@@ -429,12 +425,11 @@ class JobManager {
 	def getAllJobs: List[ Job ] = {
 		var allJobs = List[Job]()
 		
-		submittedJobs.foreach{ channelJobs => 
-			channelJobs._2.foreach{ funcJobs => 
-				allJobs = allJobs :+ funcJobs._2 
+		submittedJobs.foreach{ case( channel, jobs ) =>
+			jobs.foreach{ case( _, job ) => 
+				allJobs = allJobs :+ job 
 			} 
-		}
-		
+		}		
 		allJobs 
 	}
 	
@@ -445,7 +440,9 @@ class JobManager {
 	 */	 	
 	def getAllJobCount = {
 		var count = 0
-		submittedJobs.foreach( channelJobs => count += channelJobs._2.size )
+		submittedJobs.foreach{ case ( _, jobs ) => 
+			count += jobs.size 
+		}
 		count
 	}
 	
@@ -457,7 +454,9 @@ class JobManager {
 	def getAllClientChannels = {
 		var channels = List[ MessageChannel ]()
 		
-		submittedJobs.foreach( channelJobs => channels = channelJobs._1 :: channels )
+		submittedJobs.foreach{ case ( channel, _ ) => 
+			channels = channel :: channels 
+		}
 		channels
 		
 	}
@@ -598,15 +597,21 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	}
 	
 	private def closeAllChannels {
-		jobs.getAllClientChannels.foreach( channel => try { channel.close } catch { case e:Throwable => } )
-		workers.getAllWorkerChannels.foreach( channel => try { channel.close } catch { case e:Throwable => } )
+		jobs.getAllClientChannels.foreach{ channel => 
+			try { channel.close } catch { case e:Throwable => } 
+		}
+		workers.getAllWorkerChannels.foreach{ channel => 
+			try { channel.close } catch { case e:Throwable => } 
+		}
 	}
 	
 	private def getPendingJobCountForWorker( from: MessageChannel ) = {
 		var pending = 0
 		
 		workers.getWorkerFuncs( from ) match {
-			case Some( funcs ) => funcs.foreach{ funcName => pending += jobs.getPendingJobCount( funcName ) }
+			case Some( funcs ) => funcs.foreach{ funcName => 
+							pending += jobs.getPendingJobCount( funcName ) 
+						}
 			case _ =>
 		}
 		pending 
@@ -644,11 +649,11 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 		jobs.submitJob( job )
 		workers.getFuncWorkers( job.funcName ) match {
 			case Some( channels ) => 
-				channels.foreach( p =>
-					if( workers.isPreSleep( p._1 ) ) {
-						p._1.send( new Noop )
+				channels.foreach{ case ( channel, timeout ) =>
+					if( workers.isPreSleep( channel ) ) {
+						channel.send( new Noop )
 					}  
-				)
+				}
 			case _ =>
 		}
 		

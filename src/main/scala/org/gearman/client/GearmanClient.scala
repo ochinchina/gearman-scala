@@ -121,7 +121,7 @@ class JobCallbackProxy( callback: JobCallback ) extends JobCallback {
 	}
 	
 	override def timeout {
-		try { callback.timeout } 
+		future { callback.timeout } 
 	} 
 }
 
@@ -132,18 +132,22 @@ class JobCallbackProxy( callback: JobCallback ) extends JobCallback {
  * "server1:port,server2:port,...,servern:port"
  * @param maxOnGoingJobs the max number of jobs can be sent to gearman server
  * 
- * @param defMsgTimeout default message timeout in milliseconds      
+ * @param defMsgTimeout > 0 default message timeout in milliseconds, <= 0 no timeout      
  */ 
-class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: Int = 10000 ) {
+class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: Int = -1 ) {
+	import org.gearman.message.JobPriority._
 	import Array._
 	
 	val serverAddrs = parseServers
+	var stopped = false
 	
 	var clientChannel: MessageChannel = null	
 	val runningJobs = new LinkedList[JobInfo]
 	val pendingJobs = new LinkedList[JobInfo]
 	val executor = Executors.newFixedThreadPool( 1 )
-	val timer = new Timer 
+	val timer = new Timer
+	
+	start( 0 ) 
 
 	case class JobInfo( msg: Message, timeout: Int, respChecker: ResponseChecker )
 	case class ResponseCheckResult( isMyResponse: Boolean, finished: Boolean )
@@ -153,10 +157,10 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 	}
 	
 	
-	case class Response[T]( var value: T=null, var connLost: Boolean = false, var timeout: Boolean = false) {
+	case class Response[T](var value: T=null, var connLost: Boolean = false, var timeout: Boolean = false) {
 		val valueNotifier = new ValueNotifier[T] 
 		
-		def waitValue {
+		def waitValue{
 			valueNotifier.waitValue
 		}
 		
@@ -195,7 +199,14 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 	}
 	
 	
-	def echo( data: String, timeout: Option[Int] = None ):String = {
+	/**
+	 *  execute ECHO message in async mode
+	 *  
+	 * @param data the data sent to the server
+	 * @param callback the callback to receive the echoed data
+	 * @param timeout optional timeout in seconds	 	 	 	 
+	 */	 	
+	def asyncEcho( data: String, callback: String => Unit, timeout: Option[Int] = None ) {
 		val resp = new Response[String]
 		
 		send( new EchoReq( data ), timeout.getOrElse( defMsgTimeout ), new AbsResponseChecker[String]( resp ) {
@@ -203,26 +214,136 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 				msg match {
 					case EchoRes( respData ) =>
 						resp.value = respData
-						resp.notifyValue
+						future { callback( respData ) }
 						new ResponseCheckResult( true, true )
 					case _ => new ResponseCheckResult( false, false )
 				}
 			}
 		})
+	}
+	
+	/**
+	 *  execute ECHO message
+	 *  
+	 * @param data the data sent to the server
+	 * @param timeout optional timeout in seconds	 	 	 	 
+	 */	 	
+	def echo( data: String, timeout: Option[Int] = None ):String = {
+		val resp = new Response[String]
 		
+		asyncEcho( data, {respData => resp.value = respData; resp.notifyValue }, timeout )
+				
 		resp.waitValue
 		resp.returnValue 
 	}
 		
 	
-	def submitJob( funcName: String, uid: String, data: String, callback: JobCallback, timeout: Option[Int] = None ) {
-		send( new SubmitJob( funcName, uid, data ), timeout.getOrElse( defMsgTimeout ), createJobResponseChecker( new JobCallbackProxy( callback ) ) )			
+	/**
+	 *  submit a job to the server in async mode
+	 *  
+	 * @param funcName the function name
+	 * @param uid unique identifier
+	 * @param data the function data
+	 * @param jobCreatedCallback the callback to receive the handle of job assigned by gearman server	 
+	 * @param callback the optional callback used to receive the job status, 
+	 * 	 error, exception, data and completion info. If no callback is provided,
+	 * 	 the job will be submitted as background job	  
+	 * @param priority the job priority, must be Normal, High or Low, default is
+	 * 	Normal	 
+	 * @param timeout the optional timeout in seconds	 	  	 	 	 	 	 
+	 */	 	
+	def asyncSubmitJob( funcName: String, uid: String, data: String, jobCreatedCallback: Option[ String => Unit ] = None, callback: Option[JobCallback] = None, priority:JobPriority = JobPriority.Normal, timeout: Option[Int] = None ) {		
+		send( createSubmitJobMessage( funcName, uid, data, callback, priority ), timeout.getOrElse( defMsgTimeout ), createJobResponseChecker( if( callback.isEmpty ) None else Some( new JobCallbackProxy( callback.get ) ), jobCreatedCallback ) )			
+	}
+	
+	/**
+	 *  submit a job to the server
+	 *  
+	 * @param funcName the function name
+	 * @param uid unique identifier
+	 * @param data the function data
+	 * @param callback the optional callback used to receive the job status, 
+	 * 	 error, exception, data and completion info. If no callback is provided,
+	 * 	 the job will be submitted as background job	  
+	 * @param priority the job priority, must be Normal, High or Low, default is
+	 * 	Normal	 
+	 * @param timeout the optional timeout in seconds
+	 * 
+	 * @return the job handle assigned by job server	 	 	 	  	 	 	 	 	 
+	 */	 	
+	def submitJob( funcName: String, uid: String, data: String, callback: Option[JobCallback] = None, priority:JobPriority = JobPriority.Normal, timeout: Option[Int] = None ) : String = {
+		val resp = new Response[String]
+				
+		asyncSubmitJob( funcName, uid, data, Some{ case( jobHandle ) => resp.value = jobHandle; resp.notifyValue }, callback, priority, timeout )
+		resp.waitValue
+		resp.returnValue
+	}
+	
+	/**
+	 *  get the job status in async mode
+	 *  
+	 * @param jobHandle the job handle
+	 * @param callback the job status callback
+	 * @param timeout the optional timeout, if no timeout is provided, the defMsgTimeout
+	 * will be used
+	 */	 		
+	def asyncGetStatus( jobHandle: String, callback: StatusRes=>Unit, timeout: Option[Int] = None ) {
+		val resp = new Response[StatusRes]
+		
+		send( new GetStatus( jobHandle), timeout.getOrElse( defMsgTimeout ), new AbsResponseChecker[StatusRes]( resp ) {
+			override def checkResponse( msg: Message ): ResponseCheckResult = {
+				if( msg.isInstanceOf[StatusRes]) {
+					resp.value = msg.asInstanceOf[ StatusRes ]
+					future { callback( resp.value ) }
+					if( resp.value.jobHandle == jobHandle ) new ResponseCheckResult( true, true ) else new ResponseCheckResult( false, false )
+				} else new ResponseCheckResult( false, false )
+			}
+		}) 
+	}
+	
+	/**
+	 *  get the job status
+	 *  
+	 * @param jobHandle the job handle
+	 * @param timeout the optional timeout, if no timeout is provided, the defMsgTimeout
+	 * will be used
+	 * 
+	 * @return the job status	 	 
+	 */
+	def getStatus(  jobHandle: String, timeout: Option[Int] = None ) : StatusRes = {
+		val resp = new Response[StatusRes]
+		
+		asyncGetStatus( jobHandle, { status => resp.value = status; resp.notifyValue }, timeout )
+		resp.waitValue
+		resp.returnValue
+	}
+	
+	/**
+	 *  do graceful shutdown
+	 */	 	
+	def shutdown {
+		stopped = true
+		val valueNotifier = new ValueNotifier[ Boolean ]
+		executor.submit( new Runnable {
+			def run {
+				if( pendingJobs.size > 0 || runningJobs.size > 0 ) {
+					executor.submit( this )
+				} else {
+					valueNotifier.notifyValue( true )
+				} 
+			}
+		} )
+		
+		valueNotifier.waitValue
 	}
 
-	def start {
-		if( serverAddrs.size > 0 ) start( 0 )
+	private def createSubmitJobMessage( funcName: String, uid: String, data: String, callback: Option[JobCallback], priority:JobPriority ) = {
+		priority match {
+			case JobPriority.Normal => if( callback.isEmpty ) new SubmitJobBg( funcName, uid, data ) else new SubmitJob( funcName, uid, data )
+			case JobPriority.High => if( callback.isEmpty ) new SubmitJobHighBg( funcName, uid, data ) else new SubmitJobHigh( funcName, uid, data ) 
+			case _ => if( callback.isEmpty ) new SubmitJobLowBg( funcName, uid, data ) else new SubmitJobLow( funcName, uid, data )
+		}
 	}
-
 	private def start( index: Int ) {
 		if( index >= serverAddrs.size ) {
 			start( 0 )
@@ -253,51 +374,52 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 	}
 			
 	
-	private def createJobResponseChecker( callback: JobCallback )  =  new ResponseChecker {
+	private def createJobResponseChecker( callback: Option[JobCallback], jobCreatedCallback: Option[ String => Unit ] )  =  new ResponseChecker {
 		@volatile
 		var thisJobHandle: String = null
 		
 		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
 			if( connLost ) {
-				callback.connectionLost
+				callback.get.connectionLost
 				new ResponseCheckResult( true, true )
 			} else if( timeout ) {
-             	callback.timeout
+             	callback.get.timeout
              	new ResponseCheckResult( true, true )
             } else if( msg.isEmpty ) {
 				new ResponseCheckResult( false, false ) 
 			} else msg.get match {
 					case JobCreated( jobHandle ) =>
 						thisJobHandle = jobHandle
-						new ResponseCheckResult( true, false )
+						if( jobCreatedCallback.nonEmpty ) future { jobCreatedCallback.get( jobHandle ) }
+						if( callback.nonEmpty ) new ResponseCheckResult( true, false ) else new ResponseCheckResult( true, true )
 					case WorkDataRes( jobHandle, data ) =>
 						if( jobHandle == thisJobHandle ) {
-							callback.data( data )
+							callback.get.data( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )  
 					case WorkWarningRes( jobHandle, data ) =>
 						if( jobHandle == thisJobHandle ) {
-							callback.warning( data )
+							callback.get.warning( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )
 					case WorkStatusRes( jobHandle, numerator, denominator ) =>
 						if( jobHandle == thisJobHandle ) {
-							callback.status( numerator, numerator )
+							callback.get.status( numerator, numerator )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false )
 					case WorkCompleteRes( jobHandle, data ) =>
 					    if( jobHandle == thisJobHandle ) {
-							callback.complete( data )
+							callback.get.complete( data )
 							new ResponseCheckResult( true, true )
 						} else new ResponseCheckResult( false, false )
 					case WorkFailRes( jobHandle ) =>
 						if( jobHandle == thisJobHandle ) {
-							callback.fail
+							callback.get.fail
 							new ResponseCheckResult( true, true )
 						} else new ResponseCheckResult( false, false )
 					case WorkExceptionRes( jobHandle, data ) =>
 						if( jobHandle == thisJobHandle ) {
-							callback.exception( data )
+							callback.get.exception( data )
 							new ResponseCheckResult( true, false )
 						} else new ResponseCheckResult( false, false ) 	
 					case _ => new ResponseCheckResult( false, false )
@@ -317,10 +439,14 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 	
 	
 	private def send( msg: Message, timeout:Int, respChecker: ResponseChecker  ) {
+		if( stopped ) {		
+			throw new Exception( "in shutdown, no message will be sent to server")
+			return
+		}
 		val jobInfo = new JobInfo( msg, timeout, respChecker )
 		executor.submit( new Runnable {
 			def run {
-				timer.schedule( new TimerTask {
+				if( timeout > 0 ) timer.schedule( new TimerTask {
 					def run {
 						executor.submit( new Runnable {
 							def run {
@@ -361,6 +487,10 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: I
 	}
 	
 	private def parseServers = parseAddressList( servers )
+}
+
+object GearmanClient {
+	def apply( servers: String, maxOnGoingJobs: Int = 10, defMsgTimeout: Int = -1  ) = new GearmanClient( servers, maxOnGoingJobs, defMsgTimeout )
 }
 
 
