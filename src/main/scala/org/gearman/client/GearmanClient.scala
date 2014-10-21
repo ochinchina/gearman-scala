@@ -28,7 +28,8 @@ import java.nio.channels.{AsynchronousSocketChannel,
 import java.util.concurrent.{Executors}
 import java.net.{InetSocketAddress}
 import scala.concurrent._
-import ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * the job callback. When gearman client submits a job to gearman server, a job
@@ -90,51 +91,6 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	trait ResponseChecker {
 		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult
 	}
-	
-	
-	case class Response[T](var value: T=null, var connLost: Boolean = false, var timeout: Boolean = false) {
-		val valueNotifier = new ValueNotifier[T] 
-		
-		def waitValue{
-			valueNotifier.waitValue
-		}
-		
-		def notifyValue {
-			valueNotifier.notifyValue( value )
-		}
-		
-		def returnValue: T = {
-			if( connLost )
-				throw new Exception("Communication Lost")
-			else if( timeout )
-				throw new Exception( "Timeout")
-			else value 
-		}
-		
-	}
-	
-	abstract class AbsResponseChecker[T]( resp: Response[T]) extends ResponseChecker {		 		
-		override def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
-			if( connLost ) {
-				resp.connLost = true
-				resp.notifyValue
-				ResponseCheckResult( true, true ) 				
-			} else if( timeout ) {
-				resp.timeout = true
-				resp.notifyValue
-				ResponseCheckResult( true, true )
-			} else msg match {
-				case Some( respMsg: Message ) => checkResponse( respMsg )
-				case _ => ResponseCheckResult( false, false )
-			}
-		}
-		
-		def checkResponse( msg: Message ): ResponseCheckResult
-		
-	}
-	
-	
-	
 	
 	/**
 	 *  execute ECHO message
@@ -329,18 +285,18 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 */	 	
 	def shutdown {
 		stopped = true
-		val valueNotifier = new ValueNotifier[ Boolean ]
+		val p = Promise[ Boolean ]
 		executor.submit( new Runnable {
 			def run {
 				if( pendingJobs.size > 0 || runningJobs.size > 0 ) {
 					executor.submit( this )
 				} else {
-					valueNotifier.notifyValue( true )
+					p success true
 				} 
 			}
 		} )
 		
-		valueNotifier.waitValue
+		Await.ready( p.future, Duration.Inf )
 	}
 
 	private def createSubmitJobMessage( funcName: String, uid: String, data: String, background: Boolean, priority:JobPriority ) = {

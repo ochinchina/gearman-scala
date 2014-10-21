@@ -31,6 +31,9 @@ import java.io.{ByteArrayInputStream,
 import java.util.concurrent.{ExecutorService}
 import scala.util.control.Breaks._
 import org.gearman.message._
+import scala.concurrent._
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * manage the gearman message buffer
@@ -249,19 +252,28 @@ object AsyncSockMessageChannel {
 	
 	def connect( sockAddr: SocketAddress, exectutor: Option[ExecutorService] = None ): MessageChannel  = {
 		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
-		val connectedChannel = new ValueNotifier[MessageChannel]
+		val connectedChannel = Promise[MessageChannel]
 		
 		sockChannel.connect( sockAddr, null, new CompletionHandler[Void, Void] {
 			def completed( result:Void , attachment:Void  ) {
-				connectedChannel.notifyValue( new AsyncSockMessageChannel( sockChannel ) )
+				connectedChannel success ( new AsyncSockMessageChannel( sockChannel ) ) 
 				
 			}
 			
 			def failed( ex: Throwable , attachment:Void) {
-				connectedChannel.notifyValue( null )
+				connectedChannel failure ex
 			}
 		})
-		connectedChannel.waitValue
+		
+		val f = connectedChannel.future
+		Await.ready( f, Duration.Inf )
+
+		
+		var createChannel: MessageChannel = null		
+		f onSuccess {
+			case channel => createChannel  = channel			
+		}
+		createChannel 
 	}
 }
 
