@@ -86,16 +86,12 @@ trait JobHandler {
 	/**
 	 *  handle the received job
 	 *  
-	 * @param jobHandle the job handle
-	 * @param funcName the function name of the job
 	 * @param data the job data
 	 * @param uid the job unique id setting by client side
 	 * @param responser the job response interface, the job handler must send
 	 * any feed back to client through this interface	  	 	 	 	 	 	 
 	 */	 	
-	def handle( jobHandle: String, 
-				funcName: String, 
-				data: String, 
+	def handle( data: String, 
 				uid: Option[String],
 				responser: JobResponser )
 }
@@ -205,8 +201,8 @@ class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted:
  * 
  * @author Steven Ou         
  */  
-class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
-	val funcHandlers = new HashMap[ String, (JobHandler, Option[Int] ) ]
+class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
+	val funcHandlers = new HashMap[ String, (JobHandler, Int ) ]
 	val serverAddrs = parseAddressList( servers )
 	val channels = new java.util.LinkedList[MessageChannel]
 	// all the on-going jobs
@@ -217,38 +213,54 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 	var stopped = false
 	
 	/**
-	 *  register a function handler. Function handler can be registered
-	 *  at any time	 
-	 *  
-	 * @param funcName the function name
-	 * @param handler the handler to process the function
-	 * @param optional timeout in seconds. If the timeout is provided, the worker
-	 * should finish the job whose function name is funcName within the timeout,
-	 * if the worker can't finish it within the timeout, the gearman server will
-	 * notify the client the job is failed 	 	  	 	 	  	 	 
-	 */	 		
-	def registerHandler( funcName: String, handler: JobHandler, timeout: Option[Int] = None ) {
-		executor.submit( new Runnable {
-			def run {
-				funcHandlers += funcName -> ( handler, timeout )
-				if( timeout.nonEmpty && timeout.get > 0 ) broadcast( CanDoTimeout( funcName, timeout.get ) ) else broadcast( CanDo( funcName ) )
+	 * register the function to the gearman server
+	 *
+	 * @param funcName the function can be executed by this worker
+	 * @param timeout the job with function name {@code funcName} can be finished
+	 * within {@code timeout} seconds
+	 * 
+	 * @param funcHandle the function handler	 	 	 	 	 
+	 */	 	 	
+	def canDo( funcName: String, timeout: Int = -1 )( funcHandle: (String, Option[String], JobResponser) => Unit ) {
+		canDo( funcName, new JobHandler {
+			def handle( data: String, uid: Option[String], responser: JobResponser ) {
+				funcHandle( data, uid, responser )
 			}
-		})
+		}, timeout )
 	}
 	
 	/**
 	 *  unregister a function handler by function name 
 	 *  
 	 * @param funcName the function name
-	 */	
-	def unregisterHandler( funcName: String ) {
+	 */			
+	def cantDo( funcName: String ) {
 		executor.submit( new Runnable {
 			def run {
 				funcHandlers -= funcName
 				broadcast( CantDo( funcName ) )
 			}
 		})
-	}	
+	}
+	/**
+	 *  register a function handler. Function handler can be registered
+	 *  at any time	 
+	 *  
+	 * @param funcName the function name
+	 * @param handler the handler to process the function
+	 * @param timeout in seconds. If the timeout is greater than 0, the job should
+	 * be finished within {@code timeout} seconds, if the worker can't finish it 
+	 * within the timeout, the gearman server will fail the job. If the {@code timeout} 
+	 * is less than or equal to 0, no timeout limit for the job	  	 
+	 */	 		
+	private def canDo( funcName: String, handler: JobHandler, timeout: Int ) {
+		executor.submit( new Runnable {
+			def run {
+				funcHandlers += funcName -> ( handler, timeout )
+				if( timeout > 0 ) broadcast( CanDoTimeout( funcName, timeout ) ) else broadcast( CanDo( funcName ) )
+			}
+		})
+	}
 	
 	/**
 	 *  start the gearman worker
@@ -287,8 +299,8 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 						channels.add( channel ) 
 						channel.setMessageHandler( createMessageHandler( addr ) )
 						funcHandlers.foreach{ case ( funcName, ( handler, timeout ) ) => 
-							if( timeout.nonEmpty && timeout.get > 0 ) 
-								channel.send( CanDoTimeout( funcName, timeout.get ) ) 
+							if( timeout > 0 ) 
+								channel.send( CanDoTimeout( funcName, timeout ) ) 
 							else channel.send( CanDo( funcName ) )
 						}						 										
 						channel.open
@@ -320,8 +332,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 		funcHandlers.get( funcName ) match {
 			case Some( (handler, timeout) ) => 
 				jobs.addJob( jobHandle, from )
-				val completeCb = { handleJobCompleted( from, jobHandle ) }					
-				future { handler.handle( jobHandle, funcName, data, uid, new DefJobResponser( jobHandle, from, completeCb ) ) }
+				future { handler.handle( data, uid, new DefJobResponser( jobHandle, from, handleJobCompleted( from, jobHandle ) ) ) }
 			case _ => from.send( Error( "2", "No handler found") )
 		}
 		
@@ -347,4 +358,9 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int ) {
 		}
 		
 	} 
+}
+
+object GearmanWorker {
+	
+	def apply( servers: String, maxOnGoingJobs: Int = 10 ) = new GearmanWorker( servers, maxOnGoingJobs )
 }
