@@ -211,6 +211,9 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 
 	@volatile	
 	var stopped = false
+
+	//start the worker	
+	start
 	
 	/**
 	 * register the function to the gearman server
@@ -263,14 +266,6 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	/**
-	 *  start the gearman worker
-	 */	 	
-	def start() {
-		stopped = false		
-		for( i <- 0 until serverAddrs.size ) start( serverAddrs( i ) )			
-	}
-	
-	/**
 	 *  shutdown the worker
 	 *  
 	 * @param graceful do graceful shutdown	 	 
@@ -287,6 +282,14 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 				} 
 			}
 		})
+	}
+	
+	/**
+	 *  start the gearman worker
+	 */	 	
+	private def start() {
+		stopped = false		
+		for( i <- 0 until serverAddrs.size ) start( serverAddrs( i ) )			
 	}
 	
 	private def start( addr: InetSocketAddress ) {		

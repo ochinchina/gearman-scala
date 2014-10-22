@@ -101,8 +101,8 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * @return the echo data in Future	 	  	 	 	 
 	 */	 	
 	def echo( data: String, timeout: Int = -1 ):Future[String] = {
-		val p = Promise[String]
-		
+		val p = Promise[String]()
+				
 		send( EchoReq( data ), timeout, new ResponseChecker{
 			override def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
 				if( connLost ) {
@@ -130,8 +130,8 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 *  the job handle	  
 	 *  
 	 * @param funcName the function name
-	 * @param uid unique identifier
 	 * @param data the function data
+	 * @param uid unique identifier
 	 * @param priority the job priority, must be Normal, High or Low, default is
 	 * 	Normal	 
 	 * @param timeout the optional timeout in seconds
@@ -142,14 +142,14 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * @return job handle {@link Future[String]} 	 	 	 	  	 	 	 	 	 
 	 */	 	
 	def submitJob( funcName: String, 
-				uid: String, 
 				data: String, 
+				uid: String, 
 				priority:JobPriority, 
 				timeout: Int, 
 				callback: Option[JobEvent=>Unit] ): Future[String] = {
 				
-		val p = promise[String]
-		send( createSubmitJobMessage( funcName, uid, data, callback.isEmpty, priority ), 
+		val p = Promise[String]()
+		send( createSubmitJobMessage( funcName, data, uid, callback.isEmpty, priority ), 
 			timeout, 
 			createJobResponseChecker( callback, p ) )
 		p.future 
@@ -161,13 +161,13 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * {@code priority} and {@code timeout} to server
 	 * 
 	 * @param funcName the function name
-	 * @param uid the unique identifier
 	 * @param data the data
+	 * @param uid the unique identifier
 	 * @param priority the job priority {#link JobPriority}
 	 * @param timeout > 0 the timeout in seconds, <= 0 no timeout
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJobBg( funcName: String, uid: String, data: String, priority:JobPriority , timeout: Int ):Future[ String ] = submitJob( funcName, uid, data, priority, timeout, None )
+	def submitJobBg( funcName: String, data: String, uid: String, priority:JobPriority , timeout: Int ):Future[ String ] = submitJob( funcName, uid, data, priority, timeout, None )
 	
 	/**
 	 * submit a background job with {@code funcName}, {@code uid} and {@code data} to server
@@ -175,12 +175,23 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * The submitted job has Normal priority {#link JobPriority} and no timeout	 	  
 	 * 
 	 * @param funcName the function name
+	 * @param data the data
 	 * @param uid the unique identifier
+	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
+	 */	
+	def submitJobBg( funcName: String, data: String, uid: String ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Normal, -1, None )
+
+	/**
+	 * submit a background job with {@code funcName}, and {@code data} to server
+	 * 
+	 * The submitted job has Normal priority {#link JobPriority} and no timeout	 	  
+	 * 
+	 * @param funcName the function name
 	 * @param data the data
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	
-	def submitJobBg( funcName: String, uid: String, data: String ): Future[ String ] = submitJob( funcName, uid, data, JobPriority.Normal, -1, None )
-	
+	def submitJobBg( funcName: String, data: String ): Future[ String ] = submitJob( funcName, data, "", JobPriority.Normal, -1, None )
+		
 	/**
 	 * submit a background job with {@code funcName}, {@code uid}, {@code data}, 
 	 * {@code priority} to server
@@ -188,12 +199,12 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * No timeout for the submitted job	 	 
 	 * 
 	 * @param funcName the function name
-	 * @param uid the unique identifier
 	 * @param data the data
+	 * @param uid the unique identifier
 	 * @param priority the job priority {#link JobPriority}	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJobBg( funcName: String, uid: String, data: String, priority:JobPriority ): Future[ String ] = submitJob( funcName, uid, data, priority, -1, None ) 
+	def submitJobBg( funcName: String, data: String, uid: String, priority:JobPriority ): Future[ String ] = submitJob( funcName, data, uid, priority, -1, None ) 
 	
 	/**
 	 * submit a job with {@code funcName}, {@code uid}, {@code data}, 
@@ -202,19 +213,35 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * The callback will receive the data sent by the worker	 	 
 	 * 
 	 * @param funcName the function name
-	 * @param uid the unique identifier
 	 * @param data the data
+	 * @param uid the unique identifier
 	 * @param priority the job priority {#link JobPriority}
 	 * @param timeout > 0 the timeout in seconds, <= 0 no timeout
 	 * @param callback to receive the data from worker
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJob( funcName: String, uid: String, data: String, priority:JobPriority, timeout: Int )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, uid, data, priority, timeout, Some( jobCallback ) )
+	def submitJob( funcName: String, data: String, uid: String, priority:JobPriority, timeout: Int )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, data, uid, priority, timeout, Some( jobCallback ) )
 
     /**
 	 * submit a job with {@code funcName}, {@code uid}, {@code data}, 
 	 * and {@code callback} to server
+	 *
+	 * The submitted job has a Normal priority {#link JobPriority} and no timeout
+	 * 	  	  
+	 * The callback will receive the data sent by the worker	 	 
+	 * 
+	 * @param funcName the function name
+	 * @param data the data
+	 * @param uid the unique identifier
+	 * @param callback to receive the data from worker
+	 * 	 	 
+	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
+	 */	 
+	def submitJob( funcName: String, data: String, uid: String )( jobCallback: JobEvent=>Unit  ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Normal, -1, Some( jobCallback ) )
+	
+	/**
+	 * submit a job with {@code funcName}, {@code data}, and {@code callback} to server
 	 *
 	 * The submitted job has a Normal priority {#link JobPriority} and no timeout
 	 * 	  	  
@@ -227,10 +254,10 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 
-	def submitJob( funcName: String, uid: String, data: String )( jobCallback: JobEvent=>Unit  ): Future[ String ] = submitJob( funcName, uid, data, JobPriority.Normal, -1, Some( jobCallback ) )
+	def submitJob( funcName: String, data: String )( jobCallback: JobEvent=>Unit  ): Future[ String ] = submitJob( funcName, data, "", JobPriority.Normal, -1, Some( jobCallback ) )
 	
 	/**
-	 * submit a job with {@code funcName}, {@code uid}, {@code data}, 
+	 * submit a job with {@code funcName}, {@code data}, {@code uid},  
 	 * {@code priority}, {@code timeout} and {@code callback} to server
 	 * 
 	 * The submitted job has no timeout
@@ -238,16 +265,16 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * The callback will receive the data sent by the worker	 	 
 	 * 
 	 * @param funcName the function name
-	 * @param uid the unique identifier
 	 * @param data the data
+	 * @param uid the unique identifier
 	 * @param priority the job priority {#link JobPriority}
 	 * @param timeout > 0 the timeout in seconds, <= 0 no timeout
 	 * @param callback to receive the data from worker
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 
-	def submitJob( funcName: String, uid: String, data: String, priority:JobPriority )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, uid, data, priority, -1, Some(jobCallback ) ) 
-
+	def submitJob( funcName: String, data: String, uid: String, priority:JobPriority )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, data, uid, priority, -1, Some(jobCallback ) ) 
+	
 	/**
 	 *  get the job status
 	 *  
@@ -258,7 +285,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 * @return the job status	 	 
 	 */
 	def getStatus(  jobHandle: String, timeout: Int = -1 ) : Future[ JobStatus ] = {
-		val p = Promise[ JobStatus]
+		val p = Promise[ JobStatus]()
 		send( GetStatus( jobHandle), timeout, new ResponseChecker {
 			override def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
 				if( connLost ) {
@@ -285,7 +312,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	 */	 	
 	def shutdown {
 		stopped = true
-		val p = Promise[ Boolean ]
+		val p = Promise[ Boolean ]()
 		executor.submit( new Runnable {
 			def run {
 				if( pendingJobs.size > 0 || runningJobs.size > 0 ) {
@@ -299,7 +326,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 		Await.ready( p.future, Duration.Inf )
 	}
 
-	private def createSubmitJobMessage( funcName: String, uid: String, data: String, background: Boolean, priority:JobPriority ) = {
+	private def createSubmitJobMessage( funcName: String, data: String, uid: String, background: Boolean, priority:JobPriority ) = {
 		priority match {
 			case JobPriority.Normal => if( background ) SubmitJobBg( funcName, uid, data ) else SubmitJob( funcName, uid, data )
 			case JobPriority.High => if( background ) SubmitJobHighBg( funcName, uid, data ) else SubmitJobHigh( funcName, uid, data ) 
@@ -336,59 +363,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	}
 			
 	
-	private def createJobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] )  =  new ResponseChecker {
-		@volatile
-		var thisJobHandle: String = null
-		
-		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
-			if( connLost ) {
-				callback.get( JobConnectionLost() )
-				ResponseCheckResult( true, true )
-			} else if( timeout ) {
-             	callback.get( JobTimeout() )
-             	ResponseCheckResult( true, true )
-            } else if( msg.isEmpty ) {
-				ResponseCheckResult( false, false ) 
-			} else msg.get match {
-					case JobCreated( jobHandle ) =>						
-						thisJobHandle = jobHandle
-						p success jobHandle
-						if( callback.isEmpty ) ResponseCheckResult( true, true ) else ResponseCheckResult( true, false )
-					case WorkDataRes( jobHandle, data ) =>
-						if( jobHandle == thisJobHandle ) {
-							callback.get( JobData( data ) )
-							ResponseCheckResult( true, false )
-						} else ResponseCheckResult( false, false )  
-					case WorkWarningRes( jobHandle, data ) =>
-						if( jobHandle == thisJobHandle ) {
-							callback.get( JobWarning( data ) )
-							ResponseCheckResult( true, false )
-						} else ResponseCheckResult( false, false )
-					case WorkStatusRes( jobHandle, numerator, denominator ) =>
-						if( jobHandle == thisJobHandle ) {
-							callback.get( JobStatus( true, true, numerator, numerator ) )
-							ResponseCheckResult( true, false )
-						} else ResponseCheckResult( false, false )
-					case WorkCompleteRes( jobHandle, data ) =>
-					    if( jobHandle == thisJobHandle ) {
-							callback.get( JobComplete( data ) )
-							ResponseCheckResult( true, true )
-						} else ResponseCheckResult( false, false )
-					case WorkFailRes( jobHandle ) =>
-						if( jobHandle == thisJobHandle ) {
-							callback.get( JobFail() )
-							ResponseCheckResult( true, true )
-						} else ResponseCheckResult( false, false )
-					case WorkExceptionRes( jobHandle, data ) =>
-						if( jobHandle == thisJobHandle ) {
-							callback.get( JobException( data ) )
-							ResponseCheckResult( true, false )
-						} else ResponseCheckResult( false, false ) 	
-					case _ => ResponseCheckResult( false, false )
-					
-				}
-		}
-	}
+	private def createJobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] )  = new DefResponseChecker( callback, p )  
 	
 	private def sendPendingJobs {
 		if(  clientChannel != null && pendingJobs.size > 0 && ( maxOnGoingJobs <= 0 || runningJobs.size < maxOnGoingJobs ) ) {
@@ -449,6 +424,59 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	private def parseServers = parseAddressList( servers )
+	
+		private class DefResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] ) extends ResponseChecker {
+		@volatile
+		var thisJobHandle: String = null
+				
+		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult = {
+			if( connLost ) {
+				callback.get( JobConnectionLost() )
+				ResponseCheckResult( true, true )
+			} else if( timeout ) {
+             	callback.get( JobTimeout() )
+             	ResponseCheckResult( true, true )
+            } else if( msg.isEmpty ) {
+				ResponseCheckResult( false, false ) 
+			} else msg.get match {
+					case JobCreated( jobHandle ) =>
+						thisJobHandle = jobHandle
+						p trySuccess jobHandle
+						if( callback.isEmpty ) ResponseCheckResult( true, true ) else ResponseCheckResult( true, false )
+					case WorkDataRes( jobHandle, data ) =>
+						if( jobHandle == thisJobHandle ) {
+							callback.get( JobData( data ) )
+							ResponseCheckResult( true, false )
+						} else ResponseCheckResult( false, false )  
+					case WorkWarningRes( jobHandle, data ) =>
+						if( jobHandle == thisJobHandle ) {
+							callback.get( JobWarning( data ) )
+							ResponseCheckResult( true, false )
+						} else ResponseCheckResult( false, false )
+					case WorkStatusRes( jobHandle, numerator, denominator ) =>
+						if( jobHandle == thisJobHandle ) {
+							callback.get( JobStatus( true, true, numerator, numerator ) )
+							ResponseCheckResult( true, false )
+						} else ResponseCheckResult( false, false )
+					case WorkCompleteRes( jobHandle, data ) =>
+					    if( jobHandle == thisJobHandle ) {
+							callback.get( JobComplete( data ) )
+							ResponseCheckResult( true, true )
+						} else ResponseCheckResult( false, false )
+					case WorkFailRes( jobHandle ) =>
+						if( jobHandle == thisJobHandle ) {
+							callback.get( JobFail() )
+							ResponseCheckResult( true, true )
+						} else ResponseCheckResult( false, false )
+					case WorkExceptionRes( jobHandle, data ) =>
+						if( jobHandle == thisJobHandle ) {
+							callback.get( JobException( data ) )
+							ResponseCheckResult( true, false )
+						} else ResponseCheckResult( false, false ) 	
+					case _ => ResponseCheckResult( false, false )					
+				}
+		}
+	}
 }
 
 object GearmanClient {
