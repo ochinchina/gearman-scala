@@ -19,7 +19,7 @@ object ReverseClient {
 				//submit a job
 				client.submitJob( "reverse", args(i)) {
 					//print the received result
-					case JobComplete( data ) => println( data )
+					case JobComplete( data ) =>println( args(i) + "=>" + data )
 				}
 				.onSuccess {
 					case jobHandle=>println( s"job handle:$jobHandle")

@@ -34,6 +34,8 @@ import org.gearman.message._
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.scalalogging.{Logger}
+import org.slf4j.LoggerFactory
 
 /**
  * manage the gearman message buffer
@@ -74,7 +76,6 @@ class MessageBuffer {
 		if( msgBufLen >= 12 ) {
 			var dis = new DataInputStream( new ByteArrayInputStream( msgBuf, 8, 4 ) )
 			val len = dis.readInt
-			println( "len=" + len )
 			if( (len + 12) <= msgBufLen ) {
 				dis = new DataInputStream( new ByteArrayInputStream( msgBuf, 0, len + 12 ) )
 				msgBufLen -= (len + 12)
@@ -123,6 +124,9 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 	var msgHandler: MessageHandler = null
 	var connected = true;
 	val channel = new AsynchronousSocketChannelWrapper( sockChannel )
+	val logger = Logger(LoggerFactory.getLogger(AsyncSockMessageChannel.getClass))
+	
+	logger.debug( "connect to " + sockChannel.getRemoteAddress)
 	
 	def open {
 		startRead
@@ -141,7 +145,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 		val dos = new DataOutputStream( bos )
 		msg.writeTo( dos )
 		
-		println( "send " + msg )
+		logger.debug( "send " + msg )
 		send( ByteBuffer.wrap( bos.toByteArray ), callback )
 	}
 	       
@@ -185,7 +189,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 			}
 			
 			def failed( exc: Throwable, data: Void ) {
-				println( "diconnected")
+				logger.debug( "client " + sockChannel.getRemoteAddress  + " is closed")
 				handleDisconnect
 			}
 		})
@@ -198,7 +202,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 				if( msg == null ) 
 					break 
 				else {
-					println( "receive " + msg )
+					logger.debug( "receive " + msg )
 					try {
 						msgHandler.handleMessage( msg, this )
 					}catch{

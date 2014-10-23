@@ -151,7 +151,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 		val p = Promise[String]()
 		send( createSubmitJobMessage( funcName, data, uid, callback.isEmpty, priority ), 
 			timeout, 
-			createJobResponseChecker( callback, p ) )
+			new JobResponseChecker( callback, p )  )
 		p.future 
 	}
 
@@ -361,10 +361,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 			AsyncSockMessageChannel.asyncConnect( serverAddrs( index ), callback, Some( executor ) )			
 		}
 	}
-			
-	
-	private def createJobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] )  = new DefResponseChecker( callback, p )  
-	
+				
 	private def sendPendingJobs {
 		if(  clientChannel != null && pendingJobs.size > 0 && ( maxOnGoingJobs <= 0 || runningJobs.size < maxOnGoingJobs ) ) {
 			val jobInfo = pendingJobs.removeFirst					
@@ -378,7 +375,6 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	private def send( msg: Message, timeout:Int, respChecker: ResponseChecker  ) {
 		if( stopped ) {		
 			throw new Exception( "in shutdown, no message will be sent to server")
-			return
 		}
 		val jobInfo = JobInfo( msg, timeout, respChecker )
 		executor.submit( new Runnable {
@@ -425,7 +421,7 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	
 	private def parseServers = parseAddressList( servers )
 	
-		private class DefResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] ) extends ResponseChecker {
+	private class JobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] ) extends ResponseChecker {
 		@volatile
 		var thisJobHandle: String = null
 				
@@ -440,9 +436,12 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 				ResponseCheckResult( false, false ) 
 			} else msg.get match {
 					case JobCreated( jobHandle ) =>
-						thisJobHandle = jobHandle
-						p trySuccess jobHandle
-						if( callback.isEmpty ) ResponseCheckResult( true, true ) else ResponseCheckResult( true, false )
+						if( thisJobHandle == null ) {
+							thisJobHandle = jobHandle
+							p success jobHandle
+							if( callback.isEmpty ) ResponseCheckResult( true, true ) else ResponseCheckResult( true, false )
+						} else ResponseCheckResult( false, false )
+						
 					case WorkDataRes( jobHandle, data ) =>
 						if( jobHandle == thisJobHandle ) {
 							callback.get( JobData( data ) )
