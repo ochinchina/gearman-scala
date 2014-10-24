@@ -25,11 +25,11 @@ import java.util.concurrent.{TimeUnit}
  
 class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 
-	trait Operation {
+	private trait Operation {
 		def execute()
 	}
 	
-	class ProxyCompletionHandler[V,A]( handler: CompletionHandler[V, A], ops: LinkedList[ Operation ] ) extends CompletionHandler[V, A] {
+	private class ProxyCompletionHandler[V,A]( handler: CompletionHandler[V, A], ops: LinkedList[ Operation ] ) extends CompletionHandler[V, A] {
 		def completed( result: V, attachment: A ) {
 			try { 
 				handler.completed( result, attachment )
@@ -50,7 +50,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		
 	}
 	
-	class FirstReadOperation[A]( dsts: Array[ByteBuffer],
+	private class FirstReadOperation[A]( dsts: Array[ByteBuffer],
 			offset:Int, 
 			length:Int, 
 			timeout:Long, 
@@ -69,7 +69,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 			}			
 	}
 	
-	class SecondReadOperation[A]( dst:ByteBuffer,
+	private class SecondReadOperation[A]( dst:ByteBuffer,
             attachment:A,
             handler:CompletionHandler[Integer, A ] ) extends Operation {
         
@@ -86,7 +86,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		}
 	}
 	
-	class ThirdReadOperation[A]( dst:ByteBuffer,
+	private class ThirdReadOperation[A]( dst:ByteBuffer,
             timeout: Long,
             unit:TimeUnit,
             attachment:A ,
@@ -103,7 +103,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		}
 	}
 	
-	class FirstWriteOperation[A]( srcs: Array[ByteBuffer] ,
+	private class FirstWriteOperation[A]( srcs: Array[ByteBuffer] ,
              offset: Int,
              length: Int,
              timeout: Long,
@@ -122,7 +122,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		}
 	}
 	
-	class SecondWriteOperation[A]( src: ByteBuffer,             
+	private class SecondWriteOperation[A]( src: ByteBuffer,             
              attachment: A,
              handler: CompletionHandler[java.lang.Integer,A] ) extends Operation {
              
@@ -137,7 +137,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		}
 	}
 	
-	class ThirdWriteOperation[A]( src: ByteBuffer,
+	private class ThirdWriteOperation[A]( src: ByteBuffer,
 			timeout: Long,
              unit: TimeUnit,             
              attachment: A,
@@ -154,8 +154,8 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 		}
 	}
 	
-	val readOperations = new LinkedList[ Operation ]
-	val writeOperations = new LinkedList[ Operation ]
+	private val readOperations = new LinkedList[ Operation ]
+	private val writeOperations = new LinkedList[ Operation ]
 	
 	def read[A]( dsts: Array[ByteBuffer],
 			offset:Int, 

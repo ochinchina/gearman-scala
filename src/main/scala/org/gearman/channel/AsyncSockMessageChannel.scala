@@ -42,11 +42,11 @@ import org.slf4j.LoggerFactory
  * 
  * @author Steven Ou  
  */ 
-class MessageBuffer {
+private class MessageBuffer {
 	import Array._
 
-	var msgBuf = ofDim[Byte](1024*1024)
-	var msgBufLen = 0
+	private var msgBuf = ofDim[Byte](1024*1024)
+	private var msgBufLen = 0
 	
 	/**
 	 *  add data to this buffer
@@ -120,11 +120,11 @@ class MessageBuffer {
 
 class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends MessageChannel {
 	
-	var msgBuf = new MessageBuffer
-	var msgHandler: MessageHandler = null
-	var connected = true;
-	val channel = new AsynchronousSocketChannelWrapper( sockChannel )
-	val logger = Logger(LoggerFactory.getLogger(AsyncSockMessageChannel.getClass))
+	private var msgBuf = new MessageBuffer
+	private var msgHandler: MessageHandler = null
+	private var connected = true;
+	private val channel = new AsynchronousSocketChannelWrapper( sockChannel )
+	private val logger = Logger(LoggerFactory.getLogger(AsyncSockMessageChannel.getClass))
 	
 	logger.debug( "connect to " + sockChannel.getRemoteAddress)
 	

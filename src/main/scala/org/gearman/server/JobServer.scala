@@ -42,7 +42,7 @@ import java.net.{SocketAddress, InetSocketAddress}
  * @param numerator the worker reported completed percentage of numerator
  * @param denominator the worker reported completed percentage of denominator              
  */ 
-case class Job( funcName: String, 
+private case class Job( funcName: String, 
 			jobHandle: String, 
 			uniqId: String, 
 			data: String, 
@@ -58,7 +58,7 @@ case class Job( funcName: String,
  * implement the Ordering required by scala PriorityQueue. It compares the order
  * of two jobs, high priority have higher order 
  */ 
-class JobPriorityOrdering extends Ordering[ Job ] {
+private class JobPriorityOrdering extends Ordering[ Job ] {
 	/**
 	 * compare two jobs with their job priority.
 	 * 
@@ -98,7 +98,7 @@ class JobPriorityOrdering extends Ordering[ Job ] {
  * become a worker if it sends CAN_DO/CAN_DO_TIMEOUT to gearman server   
  *
  */  
-class WorkerManager() {
+private class WorkerManager() {
 	/* mapping between the function name and the worker message channel*/
 	private val funcWorkers = new HashMap[String, HashMap[ MessageChannel, Int ] ]
 	/*mapping between the worker ( message channel ) and its functions*/ 
@@ -236,7 +236,7 @@ class WorkerManager() {
  * different categories: pending jobs, running jobs.  
  *
  */  
-class JobManager {
+private class JobManager {
 	/*user set queue size for function, mapping between [funcName, queueSize]*/
 	private val jobQueueSize = new HashMap[String, Int ] 
 	/*all the pending jobs, mapping between [funcName, jobs ]*/	

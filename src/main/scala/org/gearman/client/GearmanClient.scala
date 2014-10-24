@@ -37,8 +37,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * 
  * @author Steven Ou  
  */
-trait JobEvent {
-}
+trait JobEvent
 
 case class JobData( data: String ) extends JobEvent
 case class JobWarning( data: String ) extends JobEvent
@@ -48,18 +47,7 @@ case class JobFail() extends JobEvent
 case class JobException( data: String ) extends JobEvent
 case class JobConnectionLost() extends JobEvent
 case class JobTimeout() extends JobEvent
- 
 
-
-trait JobCallback {
-	def handle( event: JobEvent )
-}
-
-class JobCallbackProxy( callback: JobCallback ) extends JobCallback {
-	override def handle( event: JobEvent ) {
-		future { callback.handle( event) }
-	}
-}
 
 /**
  *  construct a GearmanClient object
@@ -85,15 +73,15 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	
 	start( 0 ) 
 
-	case class JobInfo( msg: Message, timeout: Int, respChecker: ResponseChecker )
-	case class ResponseCheckResult( isMyResponse: Boolean, finished: Boolean )
+	private case class JobInfo( msg: Message, timeout: Int, respChecker: ResponseChecker )
+	private case class ResponseCheckResult( isMyResponse: Boolean, finished: Boolean )
 	
-	trait ResponseChecker {
+	private trait ResponseChecker {
 		def checkResponse( msg: Option[Message], connLost: Boolean, timeout: Boolean ): ResponseCheckResult
 	}
 	
 	/**
-	 *  execute ECHO message
+	 *  ping gearman server by sending ECHO message 
 	 *  
 	 * @param data the data sent to the server
 	 * @param timeout > 0 timeout in seconds, <= 0 no timeout

@@ -72,7 +72,7 @@ trait JobResponser {
 	/**
 	 *  indicate exception occurs when processing the job
 	 *  
-	 * @data the exception data	 	 
+	 * @param data the exception data	 	 
 	 */	 	
 	def exception( data: String )
 }
@@ -82,7 +82,7 @@ trait JobResponser {
  *  
  * @author Steven Ou
  */  
-trait JobHandler {
+private trait JobHandler {
 	/**
 	 *  handle the received job
 	 *  
@@ -101,7 +101,7 @@ trait JobHandler {
  * 
  * @author Steven Ou  
  */ 
-class JobList {
+private class JobList {
 	val jobs = new HashMap[ String, MessageChannel ]
 	val channelJobs = new HashMap[ MessageChannel, java.util.LinkedList[ String ] ]
 	
@@ -159,7 +159,7 @@ class JobList {
  * 
  * @author Steven Ou       
  */ 
-class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted: =>Unit ) extends JobResponser {
+private class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted: =>Unit ) extends JobResponser {
 
 	override def data( data: String ) {
 		channel.send( WorkDataReq( jobHandle, data ) )
@@ -202,15 +202,15 @@ class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted:
  * @author Steven Ou         
  */  
 class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
-	val funcHandlers = new HashMap[ String, (JobHandler, Int ) ]
-	val serverAddrs = parseAddressList( servers )
-	val channels = new java.util.LinkedList[MessageChannel]
+	private val funcHandlers = new HashMap[ String, (JobHandler, Int ) ]
+	private val serverAddrs = parseAddressList( servers )
+	private val channels = new java.util.LinkedList[MessageChannel]
 	// all the on-going jobs
-	val jobs = new JobList
-	val executor = Executors.newFixedThreadPool( 1 )
+	private val jobs = new JobList
+	private val executor = Executors.newFixedThreadPool( 1 )
 
 	@volatile	
-	var stopped = false
+	private var stopped = false
 
 	//start the worker	
 	start
