@@ -27,15 +27,35 @@ import java.io.{InputStream,
 			IOException}
 
 /**
- * Job priority
+ * Job priority, three priority is defined:
+ * {{{
+ * Normal: the normal job priority
+ * Low: the Low priority
+ * High: the high priority    
+ * }}}
+ * 
+ * The higher priority job will be scheduled by gearman server prior to the lower 
+ * priority job   
  */ 
 object JobPriority extends Enumeration {
 	type JobPriority = Value
-	val Low, Normal, High = Value
+	/**
+	 * Low priority
+	 */	 
+	val Low = Value 
+	/**
+	 * Normal priority
+	 */	 
+	val Normal = Value
+	/**
+	 * High priority
+	 */	 
+	val High = Value
 }
 
 /**
- * represents a message concept in the Gearman protocol
+ * represents a message concept in the Gearman protocol, include the administrative
+ * message and the gearman binary message. 
  */ 
 trait Message {
 	/**
@@ -47,7 +67,15 @@ trait Message {
 }
 
 /**
- * administration request from client
+ * administration request from client for administrative management & monitor
+ * 
+ * telnet or nc will be used by user to send administrative command to the gearman 
+ * server to get/control the status/behaviour of jobs in the gearman. The gearman
+ * server will response the user in plain text. From this plain text, the user
+ * will know the status of gearman server.   
+ *       
+ * @param command the administrative command
+ * @param args the command arguments
  */ 
 case class AdminRequest( command: String, args: List[ String ] ) extends Message {
 	def writeTo( out: DataOutputStream ) {
@@ -62,7 +90,14 @@ case class AdminRequest( command: String, args: List[ String ] ) extends Message
 }
 
 object AdminRequest {
-	def parse( line: String ) = {
+	/**
+	 * create a [[AdminRequest]] object from one line
+	 * 
+	 * @param line the administrative line
+	 * 
+	 * @return [[AdminRequest]] object or null	 	 	 
+	 */	 	
+	def apply( line: String ) = {
 		val words = line.split( "\\s+")
 		if( words.length <= 0 ) {
 			null
@@ -77,6 +112,13 @@ object AdminRequest {
 	}
 }
 
+/**
+ * response of administrative request
+ * 
+ * An administrative response may include one or more plain text lines 
+ *
+ * @param lines the plain text lines 
+ */  
 case class AdminResponse( lines: List[ String ] ) extends Message {
 	def writeTo( out: DataOutputStream ) {
 		lines.foreach { (s:String)=>
@@ -86,8 +128,16 @@ case class AdminResponse( lines: List[ String ] ) extends Message {
 	}
 } 
 
+/**
+ * represents the gearman binary protocol message 
+ */ 
 abstract class BinMessage extends Message {
-	def getType: Int
+
+	/**
+	 *  get the type of binary message
+	 *  @param the binary message type	 
+	 */	 	
+	protected [this] def getType: Int
 }
 
 
@@ -283,7 +333,11 @@ object Message {
 	}
 }
 
+/**
+ * represent the gearman binary request message
+ */ 
 trait BinRequest extends BinMessage {
+
 	def writeTo( out: DataOutputStream  ) = {
 		import Message._
 		
@@ -299,6 +353,9 @@ trait BinRequest extends BinMessage {
 	protected def writeBody( out: DataOutputStream )
 }
 
+/**
+ * represent the gearman binary response message
+ */ 
 trait BinResponse extends BinMessage {
 	def writeTo( out: DataOutputStream  ) {
 		import Message._
@@ -316,40 +373,82 @@ trait BinResponse extends BinMessage {
 	protected def writeBody( out: DataOutputStream )
 }
 
-case class CanDo( funcName: String ) extends BinRequest {
-	def getType= Message.CAN_DO
+/**
+ * represents the CAN_DO request message
+ * 
+ * @param funcName the name of function that a worker can do  
+ */ 
+case class CanDo( funcName: String ) extends BinRequest {		
+	protected [this] override def getType= Message.CAN_DO
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( funcName.getBytes("UTF-8") )
 	}
 }
 
+/**
+ * represents the CANT_DO request message
+ * 
+ * @param funcName the name of function that a worker can't do any more  
+ */ 
 case class CantDo( funcName: String ) extends BinRequest {
-	def getType=Message.CANT_DO
+	protected [this] override def getType=Message.CANT_DO
+	
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( funcName.getBytes("UTF-8") )
 	}
 }
 
+/**
+ * represents the RESET_ABILITIES request message sent to gearman server by
+ * a worker 
+ */ 
 case class ResetAbilities() extends BinRequest {
-	def getType = Message.RESET_ABILITIES
+	protected [this] override def getType = Message.RESET_ABILITIES
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * represents the PRE_SLEEP request message sent to gearman server by a worker
+ * 
+ * If no job is got from gearman server after sending GRAB_JOBXXX message to
+ * gearman server, the worker should send PRE_SLEEP message to gearman server
+ * to indicate the worker enters sleep state.
+ * 
+ * When a new job comes, the server should sending NOOP message to resume the woker.
+ * The worker then will send GRAB_JOBXXX message to gearman server again.       
+ * 
+ * @see [[Noop]] [[GrabJob]] [[GrabJobUniq]]  
+ */ 
 case class PreSleep() extends BinRequest {
-	def getType = Message.PRE_SLEEP
+	protected [this] override def getType = Message.PRE_SLEEP
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * represents the NOOP request message sent to gearman worker by gearman server
+ * to resume the worker 
+ * 
+ * @see [[PreSleep]]  
+ */ 
 case class Noop() extends BinResponse {
-	def getType = Message.NOOP
+	protected [this] override def getType = Message.NOOP
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * represents the SUBMIT_JOB request message sent to gearman server by a client
+ * 
+ * @param funcName function name
+ * @param uniqueId the user-provided unique identifier
+ * @param data the function data
+ * 
+ * @see [[JobCreated]]      
+ */ 
 case class SubmitJob( funcName: String, uniqueId: String, data: String ) extends BinRequest {
-	def getType = Message.SUBMIT_JOB
+	protected [this] override def getType = Message.SUBMIT_JOB
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( funcName.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -359,28 +458,66 @@ case class SubmitJob( funcName: String, uniqueId: String, data: String ) extends
 	}
 }
 
+/**
+ * represents the JOB_CREATED response message from the gearman server
+ * 
+ * The client submit a job to gearman server by sending SUBMIT_JOBXXX request, 
+ * the gearman server will put the job in a queue according to the job priority
+ * and response a JOB_CREATED message to client.
+ * 
+ * @param jobHandle the job handle assigned by the gearman server for the submitted job
+ * 
+ * @see [[SubmitJob]] [[SubmitJobBg]] [[SubmitJobLow]] [[SubmitJobLowBg]] [[SubmitJobHigh]] [[SubmitJobHighBg]]         
+ */ 
 case class JobCreated( jobHandle: String ) extends BinResponse {
-	def getType = Message.JOB_CREATED
+	protected [this] override def getType = Message.JOB_CREATED
 	override protected def writeBody( out: DataOutputStream ) {
 		out write jobHandle.getBytes("UTF-8")
 	}
 }
  
-
+/**
+ * represents GRAB_JOB request message from gearman worker to gearman server
+ * 
+ * After sending CAN_DO with function name request to gearman server, the worker
+ * will sending GRAB_JOB request message to the gearman server. The gearman server
+ * will assign pending job on the function to worker by sending JOB_ASSIGN message    
+ *
+ * @see [[CanDo]] [[JobAssign]] 
+ */  
 case class GrabJob() extends BinRequest {
-	def getType = Message.GRAB_JOB
+	protected [this] def getType = Message.GRAB_JOB
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * If no job is available after receiving a [[GrabJob]] or [[GrabJobUniq]] message
+ * from the worker, the server will response the worker with NO_JOB message
+ * 
+ * If received the NO_JOB message, the worker will invoke PRE_SLEEP to enter sleep
+ * state.   
+ * 
+ * @see [[GrabJob]] [[GrabJobUniq]] [[PreSleep]] 
+ */ 
 case class NoJob() extends BinResponse {
-	def getType = Message.NO_JOB 
+	protected [this] override def getType = Message.NO_JOB 
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * job assigned by the server after worker sends GRAB_JOB message
+ * 
+ * If a job is available after getting GRAB_JOB message, the server will send
+ * the JOB_ASSIGN message to the worker.
+ * 
+ * @param jobHandle the job handle assigned to job by the server
+ * @param funcName the function name
+ * @param data the data part        
+ */ 
 case class JobAssign( jobHandle: String, funcName: String, data: String ) extends BinResponse {
-	def getType = Message.JOB_ASSIGN
+	protected [this] override def getType = Message.JOB_ASSIGN
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -390,8 +527,19 @@ case class JobAssign( jobHandle: String, funcName: String, data: String ) extend
 	}
 }
 
+/**
+ * If a long time job is got, the worker should report the job progress by sending
+ * WORK_STATUS_REQ to server and then the server will convert the WORK_STATUS_REQ to
+ * WORK_STATUS_RES and send the WORK_STATUS_RES to client.
+ * 
+ * @param jobHandle the job handle
+ * @param percentCompleteNumerator the complete percentage numerator
+ * @param percentCompleteDenominator the complete percentage denominator
+ * 
+ * @see [[WorkStatusRes]]        
+ */ 
 case class WorkStatusReq(jobHandle: String, percentCompleteNumerator: Int, percentCompleteDenominator:Int ) extends BinRequest {
-	def getType = Message.WORK_STATUS
+	protected [this] def getType = Message.WORK_STATUS
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -401,8 +549,19 @@ case class WorkStatusReq(jobHandle: String, percentCompleteNumerator: Int, perce
 	}
 }
 
+/**
+ * After submitting a long time job to the server, the server will schedule it
+ * to a specific worker. The worker may report the progress of the job status to
+ * server and the server will forward the progress to the client.   
+ *
+ * @param jobHandle the job handle 
+ * @param percentCompleteNumerator the complete percentage numerator
+ * @param percentCompleteDenominator the complete percentage denominator
+ *
+ * @see [[WorkStatusReq]]
+ */ 
 case class WorkStatusRes(jobHandle: String, percentCompleteNumerator: Int, percentCompleteDenominator:Int) extends BinResponse {
-	def getType = Message.WORK_STATUS
+	protected [this] override def getType = Message.WORK_STATUS
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -413,7 +572,7 @@ case class WorkStatusRes(jobHandle: String, percentCompleteNumerator: Int, perce
 }
 
 case class WorkCompleteReq(jobHandle: String, data: String) extends BinRequest {
-	def getType = Message.WORK_COMPLETE
+	protected [this] override def getType = Message.WORK_COMPLETE
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -423,7 +582,7 @@ case class WorkCompleteReq(jobHandle: String, data: String) extends BinRequest {
 
 
 case class WorkCompleteRes(jobHandle: String, data: String) extends BinResponse {
-	def getType = Message.WORK_COMPLETE
+	protected [this] override def getType = Message.WORK_COMPLETE
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -432,7 +591,7 @@ case class WorkCompleteRes(jobHandle: String, data: String) extends BinResponse 
 }
 
 case class WorkFailReq(jobHandle: String) extends BinRequest {
-	def getType = Message.WORK_FAIL
+	protected [this] override def getType = Message.WORK_FAIL
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 	}
@@ -440,14 +599,14 @@ case class WorkFailReq(jobHandle: String) extends BinRequest {
 
 
 case class WorkFailRes(jobHandle: String) extends BinResponse {
-	def getType = Message.WORK_FAIL
+	protected [this] override def getType = Message.WORK_FAIL
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 	}
 }
 
 case class GetStatus( jobHandle: String ) extends BinRequest {
-	def getType = Message.GET_STATUS
+	protected [this] override def getType = Message.GET_STATUS
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 	}
@@ -455,7 +614,7 @@ case class GetStatus( jobHandle: String ) extends BinRequest {
 
 case class EchoReq( data: String ) extends BinRequest {
 
-	def getType = Message.ECHO_REQ
+	protected [this] override def getType = Message.ECHO_REQ
 	
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( data.getBytes("UTF-8") )
@@ -463,7 +622,7 @@ case class EchoReq( data: String ) extends BinRequest {
 }
 
 case class EchoRes( data: String ) extends BinResponse {
-	def getType = Message.ECHO_RES
+	protected [this] override def getType = Message.ECHO_RES
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( data.getBytes("UTF-8") )
 	}
@@ -471,7 +630,7 @@ case class EchoRes( data: String ) extends BinResponse {
 
 
 case class SubmitJobBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_BG
+	protected [this] override def getType = Message.SUBMIT_JOB_BG
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -482,7 +641,7 @@ case class SubmitJobBg(funcName: String, uniqueId: String, data: String) extends
 }
 
 case class Error( code: String, text: String) extends BinResponse {
-	def getType = Message.ERROR
+	protected [this] override def getType = Message.ERROR
 	override protected def writeBody( out: DataOutputStream ) {
 		out write code.getBytes( "UTF-8")
 		out write 0
@@ -491,7 +650,7 @@ case class Error( code: String, text: String) extends BinResponse {
 }
 
 case class StatusRes( jobHandle: String, knownStatus: Boolean, runningStatus: Boolean, percentCompleteNumerator: Int, percentCompleteDenominator:Int ) extends BinResponse {
-	def getType = Message.STATUS_RES
+	protected [this] override def getType = Message.STATUS_RES
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -506,7 +665,7 @@ case class StatusRes( jobHandle: String, knownStatus: Boolean, runningStatus: Bo
 }
 
 case class SubmitJobHigh(funcName: String, uniqueId: String, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_HIGH
+	protected [this] override def getType = Message.SUBMIT_JOB_HIGH
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -517,14 +676,14 @@ case class SubmitJobHigh(funcName: String, uniqueId: String, data: String) exten
 }
 
 case class SetClientId( workerId: String ) extends BinRequest {
-	def getType = Message.SET_CLIENT_ID
+	protected [this] override def getType = Message.SET_CLIENT_ID
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( workerId.getBytes( "UTF-8") )
 	}
 }
 
 case class CanDoTimeout(funcName: String, timeout: Int ) extends BinRequest {
-	def getType = Message.CAN_DO_TIMEOUT
+	protected [this] override def getType = Message.CAN_DO_TIMEOUT
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( funcName.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -533,13 +692,13 @@ case class CanDoTimeout(funcName: String, timeout: Int ) extends BinRequest {
 }
 
 class AllYours extends BinRequest {
-	def getType = Message.ALL_YOURS
+	protected [this] override def getType = Message.ALL_YOURS
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
 case class WorkExceptionReq( jobHandle: String, data: String ) extends BinRequest {
-	def getType = Message.WORK_EXCEPTION
+	protected [this] override def getType = Message.WORK_EXCEPTION
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -548,7 +707,7 @@ case class WorkExceptionReq( jobHandle: String, data: String ) extends BinReques
 }
 
 case class WorkExceptionRes( jobHandle: String, data: String ) extends BinResponse {
-	def getType = Message.WORK_EXCEPTION
+	protected [this] override def getType = Message.WORK_EXCEPTION
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -557,21 +716,21 @@ case class WorkExceptionRes( jobHandle: String, data: String ) extends BinRespon
 }
 
 case class OptionReq( opt: String) extends BinRequest {
-	def getType = Message.OPTION_REQ
+	protected [this] override def getType = Message.OPTION_REQ
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( opt.getBytes( "UTF-8") )
 	}
 }
 
 case class OptionRes( opt: String) extends BinRequest {
-	def getType = Message.OPTION_RES
+	protected [this] override def getType = Message.OPTION_RES
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( opt.getBytes( "UTF-8") )
 	}
 }
 
 case class WorkDataReq( jobHandle: String, data: String ) extends BinRequest {
-	def getType = Message.WORK_DATA
+	protected [this] override def getType = Message.WORK_DATA
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -580,7 +739,7 @@ case class WorkDataReq( jobHandle: String, data: String ) extends BinRequest {
 }
 
 case class WorkDataRes( jobHandle: String, data: String ) extends BinResponse {
-	def getType = Message.WORK_DATA
+	protected [this] override def getType = Message.WORK_DATA
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -589,7 +748,7 @@ case class WorkDataRes( jobHandle: String, data: String ) extends BinResponse {
 }
 
 case class WorkWarningReq( jobHandle: String, data: String ) extends BinRequest {
-	def getType = Message.WORK_WARNING
+	protected [this] override def getType = Message.WORK_WARNING
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -598,7 +757,7 @@ case class WorkWarningReq( jobHandle: String, data: String ) extends BinRequest 
 }
 
 case class WorkWarningRes( jobHandle: String, data: String ) extends BinResponse {
-	def getType = Message.WORK_WARNING
+	protected [this] override def getType = Message.WORK_WARNING
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -608,13 +767,13 @@ case class WorkWarningRes( jobHandle: String, data: String ) extends BinResponse
 
 
 case class GrabJobUniq() extends BinRequest {
-	def getType = Message.GRAB_JOB_UNIQ
+	protected [this] override def getType = Message.GRAB_JOB_UNIQ
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
 case class JobAssignUniq( jobHandle: String, funcName: String, id: String, data: String ) extends BinResponse {
-	def getType = Message.JOB_ASSIGN_UNIQ
+	protected [this] override def getType = Message.JOB_ASSIGN_UNIQ
 	override protected def writeBody( out: DataOutputStream ) {
 		out.write( jobHandle.getBytes( "UTF-8") )
 		out.write( 0 )
@@ -627,7 +786,7 @@ case class JobAssignUniq( jobHandle: String, funcName: String, id: String, data:
 }
 
 case class SubmitJobHighBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_HIGH_BG
+	protected [this] override def getType = Message.SUBMIT_JOB_HIGH_BG
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -638,7 +797,7 @@ case class SubmitJobHighBg(funcName: String, uniqueId: String, data: String) ext
 }
 
 case class SubmitJobLow(funcName: String, uniqueId: String, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_LOW
+	protected [this] override def getType = Message.SUBMIT_JOB_LOW
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -649,7 +808,7 @@ case class SubmitJobLow(funcName: String, uniqueId: String, data: String) extend
 }
 
 case class SubmitJobLowBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_LOW_BG
+	protected [this] override def getType = Message.SUBMIT_JOB_LOW_BG
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -660,7 +819,7 @@ case class SubmitJobLowBg(funcName: String, uniqueId: String, data: String) exte
 }
 
 case class SubmitJobSched(funcName: String, uniqueId: String, minute: Int, hour: Int, day: Int, month: Int, weekDay: Int, data: String) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_SCHED
+	protected [this] override def getType = Message.SUBMIT_JOB_SCHED
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0
@@ -681,7 +840,7 @@ case class SubmitJobSched(funcName: String, uniqueId: String, minute: Int, hour:
 }
 
 case class SubmitJobEpoch(funcName: String, uniqueId: String, epoch: Long, data: String ) extends BinRequest {
-	def getType = Message.SUBMIT_JOB_EPOCH
+	protected [this] override def getType = Message.SUBMIT_JOB_EPOCH
 	override protected def writeBody( out: DataOutputStream ) {
 		out write funcName.getBytes( "UTF-8")
 		out write 0

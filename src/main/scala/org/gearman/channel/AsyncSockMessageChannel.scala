@@ -107,7 +107,7 @@ private class MessageBuffer {
 			msg = new String( msgBuf, 0, i, "UTF-8" )
 			copy( msgBuf, i, msgBuf, 0, msgBufLen - i )
 			msgBufLen -= i
-			AdminRequest.parse( msg.trim )			
+			AdminRequest( msg.trim )			
 		} else null
 	}
 }

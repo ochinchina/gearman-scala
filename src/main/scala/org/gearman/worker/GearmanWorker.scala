@@ -27,18 +27,23 @@ import scala.util.control.Breaks._
 import java.net.InetSocketAddress
 import java.util.concurrent.{Executors}
 import scala.concurrent._
+import scala.concurrent.duration.Duration
 import ExecutionContext.Implicits.global
 
 /**
  * responser for a job got from gearman server
  * 
+ *    
+ * 
  * @author Steven Ou  
  */ 
 trait JobResponser {
 	/**
-	 * send data back to client
+	 * The worker sends updates, partial results or flushes data during long
+	 * running job.	 
+	 * 
 	 *  
-	 * @param data the data to be sent	 	 
+	 * @param data the data sent to client	 
 	 */	 	
 	def data( data: String )
 	
@@ -102,8 +107,8 @@ private trait JobHandler {
  * @author Steven Ou  
  */ 
 private class JobList {
-	val jobs = new HashMap[ String, MessageChannel ]
-	val channelJobs = new HashMap[ MessageChannel, java.util.LinkedList[ String ] ]
+	private val jobs = new HashMap[ String, MessageChannel ]
+	private val channelJobs = new HashMap[ MessageChannel, java.util.LinkedList[ String ] ]
 	
 	/**
 	 *  add a job to the list
@@ -139,7 +144,7 @@ private class JobList {
 	def size = jobs.size
 
 	/**
-	 *  get the number of jobs on the gearman server channel
+	 *  get the number of jobs on the channel
 	 *  
 	 * @param channel the gearman server channel	 	 
 	 */	 		
@@ -161,31 +166,42 @@ private class JobList {
  */ 
 private class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCompleted: =>Unit ) extends JobResponser {
 
+	private var completed = false
+	
 	override def data( data: String ) {
-		channel.send( WorkDataReq( jobHandle, data ) )
+		if( !completed ) channel.send( WorkDataReq( jobHandle, data ) )
 	}
 	
 	override def status( numerator: Int, denominator: Int ) {
-		channel.send( WorkStatusReq( jobHandle, numerator, denominator ) )
+		if( !completed ) channel.send( WorkStatusReq( jobHandle, numerator, denominator ) )
 	}
 	
 	override def complete( data: String ) {
-		jobCompleted
-		channel.send( WorkCompleteReq( jobHandle, data ) )
+		if( !completed ) {
+			completed = true
+			jobCompleted
+			channel.send( WorkCompleteReq( jobHandle, data ) )
+		}
 	}
 	
 	override def warning( data: String ) {
-		channel.send( WorkWarningReq( jobHandle, data ) )
+		if( !completed ) channel.send( WorkWarningReq( jobHandle, data ) )
 	}
 	
 	override def fail {
-		jobCompleted
-		channel.send( WorkFailReq( jobHandle ) )
+		if( !completed ) {
+			completed = true
+			jobCompleted
+			channel.send( WorkFailReq( jobHandle ) )
+		}
 	}
 	
 	override def exception( data: String ) {
-		jobCompleted
-		channel.send( WorkExceptionReq( jobHandle, data ) )
+		if( !completed ) {
+			completed = true
+			jobCompleted
+			channel.send( WorkExceptionReq( jobHandle, data ) )
+		}
 	}
 }
 
@@ -216,13 +232,15 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	start
 	
 	/**
-	 * register the function to the gearman server
+	 * tells the gearman server what work the worker can do
 	 *
-	 * @param funcName the function can be executed by this worker
-	 * @param timeout the job with function name {@code funcName} can be finished
-	 * within {@code timeout} seconds
+	 * @param funcName what function can be done by this worker
+	 * @param timeout > 0 the job with function name {@code funcName} can be finished
+	 * within {@code timeout} seconds, <= 0, no timeout for the function
 	 * 
-	 * @param funcHandle the function handler	 	 	 	 	 
+	 * @param funcHandle the function handler with three parameters. First parameter is the
+	 * function data, the second parameter is the optional job uid and the third
+	 * parameter is the job responser used to send data to the client	 	 	 	 	 	 	 
 	 */	 	 	
 	def canDo( funcName: String, timeout: Int = -1 )( funcHandle: (String, Option[String], JobResponser) => Unit ) {
 		canDo( funcName, new JobHandler {
@@ -233,7 +251,8 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	/**
-	 *  unregister a function handler by function name 
+	 *  tells the gearman server this worker will not do the previous registered
+	 *  function through [[canDo]] method	 
 	 *  
 	 * @param funcName the function name
 	 */			
@@ -268,20 +287,32 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	/**
 	 *  shutdown the worker
 	 *  
-	 * @param graceful do graceful shutdown	 	 
+	 * If the {@code graceful} is true, the worker will wait for all on-going
+	 * job completed and then disconnect with gearman server.
+	 * 
+	 * If the {@code graceful} is false, the worker will disconnect with gearman
+	 * server immediatelly even if there are on-going jobs.	 	 	 	 	 	 
+	 *  
+	 * @param graceful true shutdown the job in graceful way, false shutdown
+	 * the worker immediatelly even if there are on-going job	  	 	 
 	 */	 	
 	def shutdown( graceful: Boolean ) {
 		stopped = true
+		val p = Promise[Boolean]()
 		executor.submit( new Runnable {
 			def run {
 				if( graceful ) {
+					if( channels.size <= 0 ) p.success(true) else executor.submit( this ) 
 				} else {
 					val iter = channels.iterator
 					while( iter.hasNext ) try { iter.next.close } catch { case e: Throwable => }
-					channels.clear 
+					channels.clear
+					p.success(true) 
 				} 
 			}
 		})
+		
+		Await.ready( p.future, Duration.Inf )
 	}
 	
 	/**
@@ -336,7 +367,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 			case Some( (handler, timeout) ) => 
 				jobs.addJob( jobHandle, from )
 				future { handler.handle( data, uid, new DefJobResponser( jobHandle, from, handleJobCompleted( from, jobHandle ) ) ) }
-			case _ => from.send( Error( "2", "No handler found") )
+			case _ =>
 		}
 		
 		grabJob( from )
@@ -351,7 +382,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	private def grabJob( channel: MessageChannel ) {
-		if( maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) channel.send( GrabJob() ) else channel.send( PreSleep() )
+		if( !stopped && (maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) ) channel.send( GrabJob() ) else channel.send( PreSleep() )
 	}
 	
 	private def broadcast( msg: Message ) {		
