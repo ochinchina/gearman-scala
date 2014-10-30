@@ -131,3 +131,11 @@ The source of this example can be found at example/src/main/scala/org/gearman/ex
 ##Other examples
 
 The another examples can be found at  example/src/main/scala/org/gearman/example/ directory
+
+#License
+
+Apache License 2
+
+#API document
+
+http://ochinchina.github.io/gearman-scala-api/
