@@ -1,0 +1,1129 @@
+<!DOCTYPE html >
+<html>
+        <head>
+          <title>message - org.gearman.message</title>
+          <meta name="description" content="message - org.gearman.message" />
+          <meta name="keywords" content="message org.gearman.message" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../../../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../../../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../../../index.html';
+            var hash = 'org.gearman.message.package';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../../lib/package_big.png" />
+        <p id="owner"><a href="../../package.html" class="extype" name="org">org</a>.<a href="../package.html" class="extype" name="org.gearman">gearman</a></p>
+        <h1>message</h1> <span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <span class="name">message</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        
+        
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="org.gearman.message.AdminRequest" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="AdminRequestextendsMessagewithProductwithSerializable"></a>
+      <a id="AdminRequest:AdminRequest"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="AdminRequest.html"><span class="name">AdminRequest</span></a><span class="params">(<span name="command">command: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="args">args: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>)</span><span class="result"> extends <a href="Message.html" class="extype" name="org.gearman.message.Message">Message</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@AdminRequestextendsMessagewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">administration request from client for administrative management &amp; monitor</p><div class="fullcomment"><div class="comment cmt"><p>administration request from client for administrative management &amp; monitor</p><p>telnet or nc will be used by user to send administrative command to the gearman
+server to get/control the status/behaviour of jobs in the gearman. The gearman
+server will response the user in plain text. From this plain text, the user
+will know the status of gearman server.
+</p></div><dl class="paramcmts block"><dt class="param">command</dt><dd class="cmt"><p>the administrative command</p></dd><dt class="param">args</dt><dd class="cmt"><p>the command arguments
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.AdminResponse" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="AdminResponseextendsMessagewithProductwithSerializable"></a>
+      <a id="AdminResponse:AdminResponse"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="AdminResponse.html"><span class="name">AdminResponse</span></a><span class="params">(<span name="lines">lines: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>)</span><span class="result"> extends <a href="Message.html" class="extype" name="org.gearman.message.Message">Message</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@AdminResponseextendsMessagewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">response of administrative request</p><div class="fullcomment"><div class="comment cmt"><p>response of administrative request</p><p>An administrative response may include one or more plain text lines
+</p></div><dl class="paramcmts block"><dt class="param">lines</dt><dd class="cmt"><p>the plain text lines
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.AllYours" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="AllYoursextendsBinMessagewithBinRequest"></a>
+      <a id="AllYours:AllYours"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="AllYours.html"><span class="name">AllYours</span></a><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@AllYoursextendsBinMessagewithBinRequest" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li><li name="org.gearman.message.BinMessage" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="BinMessageextendsMessage"></a>
+      <a id="BinMessage:BinMessage"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="BinMessage.html"><span class="name">BinMessage</span></a><span class="result"> extends <a href="Message.html" class="extype" name="org.gearman.message.Message">Message</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@BinMessageextendsMessage" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the gearman binary protocol message
+</p>
+    </li><li name="org.gearman.message.BinRequest" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="BinRequestextendsBinMessage"></a>
+      <a id="BinRequest:BinRequest"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a href="BinRequest.html"><span class="name">BinRequest</span></a><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@BinRequestextendsBinMessage" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represent the gearman binary request message
+</p>
+    </li><li name="org.gearman.message.BinResponse" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="BinResponseextendsBinMessage"></a>
+      <a id="BinResponse:BinResponse"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a href="BinResponse.html"><span class="name">BinResponse</span></a><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@BinResponseextendsBinMessage" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represent the gearman binary response message
+</p>
+    </li><li name="org.gearman.message.CanDo" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="CanDoextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="CanDo:CanDo"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="CanDo.html"><span class="name">CanDo</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@CanDoextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the CAN_DO request message</p><div class="fullcomment"><div class="comment cmt"><p>represents the CAN_DO request message</p><p>worker tells server what it can do by sending CAN_DO request message to the server
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the name of function that a worker can do
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.CanDoTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="CanDoTimeoutextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="CanDoTimeout:CanDoTimeout"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="CanDoTimeout.html"><span class="name">CanDoTimeout</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="timeout">timeout: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@CanDoTimeoutextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">A worker tells server it can do a work within a limited seconds by sending
+CAN_DO_TIMEOUT request to server.</p><div class="fullcomment"><div class="comment cmt"><p>A worker tells server it can do a work within a limited seconds by sending
+CAN_DO_TIMEOUT request to server.</p><p>If the job is still not completed within the given time, the server will think
+the job is failed and WORK_FAIL message will be sent to client.
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">timeout</dt><dd class="cmt"><p>timeout in seconds
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkFailRes.html" class="extype" name="org.gearman.message.WorkFailRes">WorkFailRes</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.CantDo" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="CantDoextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="CantDo:CantDo"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="CantDo.html"><span class="name">CantDo</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@CantDoextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the CANT_DO request message</p><div class="fullcomment"><div class="comment cmt"><p>represents the CANT_DO request message</p><p>worker tells server it will not do a work, that it can do before, anymore
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the name of function that a worker can't do any more
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.EchoReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="EchoReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="EchoReq:EchoReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="EchoReq.html"><span class="name">EchoReq</span></a><span class="params">(<span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@EchoReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">A client can ping a server by sending a ECHO request to server to check if
+the server works ok.</p><div class="fullcomment"><div class="comment cmt"><p>A client can ping a server by sending a ECHO request to server to check if
+the server works ok.
+</p></div><dl class="paramcmts block"><dt class="param">data</dt><dd class="cmt"><p>the data send to server, the server will send this data back to
+client if it works.
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="EchoRes.html" class="extype" name="org.gearman.message.EchoRes">EchoRes</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.EchoRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="EchoResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="EchoRes:EchoRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="EchoRes.html"><span class="name">EchoRes</span></a><span class="params">(<span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@EchoResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the ECHO response to client after server receives ECHO request
+</p><div class="fullcomment"><div class="comment cmt"><p>represents the ECHO response to client after server receives ECHO request
+</p></div><dl class="paramcmts block"><dt class="param">data</dt><dd class="cmt"><p>the data echoed to client</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="EchoReq.html" class="extype" name="org.gearman.message.EchoReq">EchoReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.Error" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ErrorextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="Error:Error"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="Error.html"><span class="name">Error</span></a><span class="params">(<span name="code">code: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="text">text: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@ErrorextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">if any error occurs at the server side, an ERROR message will be sent by
+server.</p><div class="fullcomment"><div class="comment cmt"><p>if any error occurs at the server side, an ERROR message will be sent by
+server.
+</p></div><dl class="paramcmts block"><dt class="param">code</dt><dd class="cmt"><p>the error code</p></dd><dt class="param">text</dt><dd class="cmt"><p>the error hints
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.GetStatus" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="GetStatusextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="GetStatus:GetStatus"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="GetStatus.html"><span class="name">GetStatus</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@GetStatusextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After submitting a job to server, the client can query the status of job
+by sending this request message to server at any time before job is completed.</p><div class="fullcomment"><div class="comment cmt"><p>After submitting a job to server, the client can query the status of job
+by sending this request message to server at any time before job is completed.</p><p>The server will query the job status and send it to client by <a href="StatusRes.html" class="extype" name="org.gearman.message.StatusRes">StatusRes</a>
+message.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="StatusRes.html" class="extype" name="org.gearman.message.StatusRes">StatusRes</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.GrabJob" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="GrabJobextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="GrabJob:GrabJob"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="GrabJob.html"><span class="name">GrabJob</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@GrabJobextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents GRAB_JOB request message from gearman worker to gearman server</p><div class="fullcomment"><div class="comment cmt"><p>represents GRAB_JOB request message from gearman worker to gearman server</p><p>After sending CAN_DO with function name request to gearman server, the worker
+will sending GRAB_JOB request message to the gearman server. The gearman server
+will assign pending job on the function to worker by sending JOB_ASSIGN message
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="CanDo.html" class="extype" name="org.gearman.message.CanDo">CanDo</a> <a href="JobAssign.html" class="extype" name="org.gearman.message.JobAssign">JobAssign</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.GrabJobUniq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="GrabJobUniqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="GrabJobUniq:GrabJobUniq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="GrabJobUniq.html"><span class="name">GrabJobUniq</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@GrabJobUniqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">worker sends GRAB_JOB_UNIQ request to server to get a job with uniqueId.</p><div class="fullcomment"><div class="comment cmt"><p>worker sends GRAB_JOB_UNIQ request to server to get a job with uniqueId.</p><p>If a Job is available, the server will replies with a JOB_ASSIGN_UNIQ response
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="JobAssignUniq.html" class="extype" name="org.gearman.message.JobAssignUniq">JobAssignUniq</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.JobAssign" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="JobAssignextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="JobAssign:JobAssign"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="JobAssign.html"><span class="name">JobAssign</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@JobAssignextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">job assigned by the server after worker sends GRAB_JOB message</p><div class="fullcomment"><div class="comment cmt"><p>job assigned by the server after worker sends GRAB_JOB message</p><p>If a job is available after getting GRAB_JOB message, the server will send
+the JOB_ASSIGN message to the worker.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle assigned to job by the server</p></dd><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">data</dt><dd class="cmt"><p>the data part
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.JobAssignUniq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="JobAssignUniqextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="JobAssignUniq:JobAssignUniq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="JobAssignUniq.html"><span class="name">JobAssignUniq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="id">id: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@JobAssignUniqextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After getting GRAB_JOB_UNIQ request, if a job is available, the server will
+send JOB_ASSIGN_UNIQ response to worker.</p><div class="fullcomment"><div class="comment cmt"><p>After getting GRAB_JOB_UNIQ request, if a job is available, the server will
+send JOB_ASSIGN_UNIQ response to worker.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">id</dt><dd class="cmt"><p>the unique identifier assigned by user when submitting job</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="GrabJobUniq.html" class="extype" name="org.gearman.message.GrabJobUniq">GrabJobUniq</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.JobCreated" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="JobCreatedextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="JobCreated:JobCreated"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="JobCreated.html"><span class="name">JobCreated</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@JobCreatedextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the JOB_CREATED response message from the gearman server</p><div class="fullcomment"><div class="comment cmt"><p>represents the JOB_CREATED response message from the gearman server</p><p>The client submit a job to gearman server by sending SUBMIT_JOBXXX request,
+the gearman server will put the job in a queue according to the job priority
+and response a JOB_CREATED message to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle assigned by the gearman server for the submitted job
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a> <a href="SubmitJobBg.html" class="extype" name="org.gearman.message.SubmitJobBg">SubmitJobBg</a> <a href="SubmitJobLow.html" class="extype" name="org.gearman.message.SubmitJobLow">SubmitJobLow</a> <a href="SubmitJobLowBg.html" class="extype" name="org.gearman.message.SubmitJobLowBg">SubmitJobLowBg</a> <a href="SubmitJobHigh.html" class="extype" name="org.gearman.message.SubmitJobHigh">SubmitJobHigh</a> <a href="SubmitJobHighBg.html" class="extype" name="org.gearman.message.SubmitJobHighBg">SubmitJobHighBg</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.Message" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="MessageextendsAnyRef"></a>
+      <a id="Message:Message"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a href="Message.html"><span class="name">Message</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@MessageextendsAnyRef" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents a message concept in the Gearman protocol, include the administrative
+message and the gearman binary message.</p>
+    </li><li name="org.gearman.message.NoJob" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="NoJobextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="NoJob:NoJob"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="NoJob.html"><span class="name">NoJob</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@NoJobextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">If no job is available after receiving a <a href="GrabJob.html" class="extype" name="org.gearman.message.GrabJob">GrabJob</a> or <a href="GrabJobUniq.html" class="extype" name="org.gearman.message.GrabJobUniq">GrabJobUniq</a> message
+from the worker, the server will response the worker with NO_JOB message</p><div class="fullcomment"><div class="comment cmt"><p>If no job is available after receiving a <a href="GrabJob.html" class="extype" name="org.gearman.message.GrabJob">GrabJob</a> or <a href="GrabJobUniq.html" class="extype" name="org.gearman.message.GrabJobUniq">GrabJobUniq</a> message
+from the worker, the server will response the worker with NO_JOB message</p><p>If received the NO_JOB message, the worker will invoke PRE_SLEEP to enter sleep
+state.
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="GrabJob.html" class="extype" name="org.gearman.message.GrabJob">GrabJob</a> <a href="GrabJobUniq.html" class="extype" name="org.gearman.message.GrabJobUniq">GrabJobUniq</a> <a href="PreSleep.html" class="extype" name="org.gearman.message.PreSleep">PreSleep</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.Noop" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="NoopextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="Noop:Noop"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="Noop.html"><span class="name">Noop</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@NoopextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the NOOP request message sent to gearman worker by gearman server
+to resume the worker
+</p><div class="fullcomment"><div class="comment cmt"><p>represents the NOOP request message sent to gearman worker by gearman server
+to resume the worker
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="PreSleep.html" class="extype" name="org.gearman.message.PreSleep">PreSleep</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.OptionReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="OptionReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="OptionReq:OptionReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="OptionReq.html"><span class="name">OptionReq</span></a><span class="params">(<span name="opt">opt: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@OptionReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">set the server options
+</p><div class="fullcomment"><div class="comment cmt"><p>set the server options
+</p></div><dl class="paramcmts block"><dt class="param">opt</dt><dd class="cmt"><p>the option set to the server
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="OptionRes.html" class="extype" name="org.gearman.message.OptionRes">OptionRes</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.OptionRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="OptionResextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="OptionRes:OptionRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="OptionRes.html"><span class="name">OptionRes</span></a><span class="params">(<span name="opt">opt: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@OptionResextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After processing the OPTION request from client, the server should send
+an OPTION response to the client to indicate the success/failure.</p><div class="fullcomment"><div class="comment cmt"><p>After processing the OPTION request from client, the server should send
+an OPTION response to the client to indicate the success/failure.
+</p></div><dl class="paramcmts block"><dt class="param">opt</dt><dd class="cmt"><p>the response data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="OptionReq.html" class="extype" name="org.gearman.message.OptionReq">OptionReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.PreSleep" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="PreSleepextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="PreSleep:PreSleep"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="PreSleep.html"><span class="name">PreSleep</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@PreSleepextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the PRE_SLEEP request message sent to gearman server by a worker</p><div class="fullcomment"><div class="comment cmt"><p>represents the PRE_SLEEP request message sent to gearman server by a worker</p><p>If no job is got from gearman server after sending GRAB_JOBXXX message to
+gearman server, the worker should send PRE_SLEEP message to gearman server
+to indicate the worker enters sleep state.</p><p>When a new job comes, the server should sending NOOP message to resume the woker.
+The worker then will send GRAB_JOBXXX message to gearman server again.
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="Noop.html" class="extype" name="org.gearman.message.Noop">Noop</a> <a href="GrabJob.html" class="extype" name="org.gearman.message.GrabJob">GrabJob</a> <a href="GrabJobUniq.html" class="extype" name="org.gearman.message.GrabJobUniq">GrabJobUniq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.ResetAbilities" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ResetAbilitiesextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="ResetAbilities:ResetAbilities"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="ResetAbilities.html"><span class="name">ResetAbilities</span></a><span class="params">()</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@ResetAbilitiesextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the RESET_ABILITIES request message sent to gearman server by
+a worker</p><div class="fullcomment"><div class="comment cmt"><p>represents the RESET_ABILITIES request message sent to gearman server by
+a worker</p><p>worker tells the server it will not do any work now
+</p></div></div>
+    </li><li name="org.gearman.message.SetClientId" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SetClientIdextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SetClientId:SetClientId"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SetClientId.html"><span class="name">SetClientId</span></a><span class="params">(<span name="workerId">workerId: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SetClientIdextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">A worker can set its identifier for administrative purpose.</p><div class="fullcomment"><div class="comment cmt"><p>A worker can set its identifier for administrative purpose. A user can connect
+to server from telnet/nc and if he/she enters &quot;workers&quot;, the worker identifier
+will be shown in the response lines.
+</p></div><dl class="paramcmts block"><dt class="param">workerId</dt><dd class="cmt"><p>the worker identifier
+</p></dd></dl></div>
+    </li><li name="org.gearman.message.StatusRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="StatusResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="StatusRes:StatusRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="StatusRes.html"><span class="name">StatusRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="knownStatus">knownStatus: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="runningStatus">runningStatus: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="percentCompleteNumerator">percentCompleteNumerator: <span class="extype" name="scala.Int">Int</span></span>, <span name="percentCompleteDenominator">percentCompleteDenominator: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@StatusResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After receiving a GET_STATUS request from the client, the server will check
+the job status and replies the client.</p><div class="fullcomment"><div class="comment cmt"><p>After receiving a GET_STATUS request from the client, the server will check
+the job status and replies the client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">knownStatus</dt><dd class="cmt"><p>true the server knows the job status, false the server does
+not know the job status</p></dd><dt class="param">runningStatus</dt><dd class="cmt"><p>true the job is running(processing by a worker), false the
+job is not running( no any worker processes the job)</p></dd><dt class="param">percentCompleteNumerator</dt><dd class="cmt"><p>the percentage complete numerator ( only valid if
+<code> knownStatus</code> is true )</p></dd><dt class="param">percentCompleteDenominator</dt><dd class="cmt"><p>the percentage complete denominator ( only valid if
+<code> knownStatus</code> is true )</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="GetStatus.html" class="extype" name="org.gearman.message.GetStatus">GetStatus</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJob" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJob:SubmitJob"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJob.html"><span class="name">SubmitJob</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">represents the SUBMIT_JOB request message sent to gearman server by a client</p><div class="fullcomment"><div class="comment cmt"><p>represents the SUBMIT_JOB request message sent to gearman server by a client</p><p>server replies a JOB_CREATED response to client after it accepts the submitted job
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>function name</p></dd><dt class="param">uniqueId</dt><dd class="cmt"><p>the user-provided unique identifier</p></dd><dt class="param">data</dt><dd class="cmt"><p>the function data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="JobCreated.html" class="extype" name="org.gearman.message.JobCreated">JobCreated</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobBg" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobBgextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobBg:SubmitJobBg"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobBg.html"><span class="name">SubmitJobBg</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobBgextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">submit a job to the server in background.</p><div class="fullcomment"><div class="comment cmt"><p>submit a job to the server in background. If a job is a background job, the
+client will not receive the job status from server except it queries the job
+status by sending GET_STATUS request to server.
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">uniqueId</dt><dd class="cmt"><p>the unique identifier assigned to job by client</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data</p></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobEpoch" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="SubmitJobEpochextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobEpoch:SubmitJobEpoch"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobEpoch.html"><span class="name">SubmitJobEpoch</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="epoch">epoch: <span class="extype" name="scala.Long">Long</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobEpochextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li><li name="org.gearman.message.SubmitJobHigh" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobHighextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobHigh:SubmitJobHigh"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobHigh.html"><span class="name">SubmitJobHigh</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobHighextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">submit a high priority job.</p><div class="fullcomment"><div class="comment cmt"><p>submit a high priority job.</p><p>please refer to <a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a>
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobHighBg" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobHighBgextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobHighBg:SubmitJobHighBg"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobHighBg.html"><span class="name">SubmitJobHighBg</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobHighBgextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">submit a high priority job in background</p><div class="fullcomment"><div class="comment cmt"><p>submit a high priority job in background</p><p>Please refer to <a href="SubmitJobBg.html" class="extype" name="org.gearman.message.SubmitJobBg">SubmitJobBg</a>
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobLow" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobLowextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobLow:SubmitJobLow"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobLow.html"><span class="name">SubmitJobLow</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobLowextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">submit a low priority job</p><div class="fullcomment"><div class="comment cmt"><p>submit a low priority job</p><p>Please refer to <a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a>
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobLowBg" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="SubmitJobLowBgextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobLowBg:SubmitJobLowBg"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobLowBg.html"><span class="name">SubmitJobLowBg</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobLowBgextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">submit a low priority job in background</p><div class="fullcomment"><div class="comment cmt"><p>submit a low priority job in background</p><p>Please refer to <a href="SubmitJobBg.html" class="extype" name="org.gearman.message.SubmitJobBg">SubmitJobBg</a>
+</p></div><dl class="paramcmts block"><dt class="param">funcName</dt><dd class="cmt"><p>the function name</p></dd><dt class="param">data</dt><dd class="cmt"><p>the job data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="SubmitJob.html" class="extype" name="org.gearman.message.SubmitJob">SubmitJob</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.SubmitJobSched" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="SubmitJobSchedextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="SubmitJobSched:SubmitJobSched"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="SubmitJobSched.html"><span class="name">SubmitJobSched</span></a><span class="params">(<span name="funcName">funcName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uniqueId">uniqueId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="minute">minute: <span class="extype" name="scala.Int">Int</span></span>, <span name="hour">hour: <span class="extype" name="scala.Int">Int</span></span>, <span name="day">day: <span class="extype" name="scala.Int">Int</span></span>, <span name="month">month: <span class="extype" name="scala.Int">Int</span></span>, <span name="weekDay">weekDay: <span class="extype" name="scala.Int">Int</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@SubmitJobSchedextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li><li name="org.gearman.message.WorkCompleteReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkCompleteReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkCompleteReq:WorkCompleteReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkCompleteReq.html"><span class="name">WorkCompleteReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkCompleteReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">If a job processing is completed and no any error, the worker will send
+WORK_COMPLETE request message to the server.</p><div class="fullcomment"><div class="comment cmt"><p>If a job processing is completed and no any error, the worker will send
+WORK_COMPLETE request message to the server. Then the server will translate the
+WORK_COMPLETE request message to WORK_COMPLETE response message and send to
+the client.</p><p>This request presents the WORK_COMPLETE request from worker to server.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkCompleteRes.html" class="extype" name="org.gearman.message.WorkCompleteRes">WorkCompleteRes</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkCompleteRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkCompleteResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkCompleteRes:WorkCompleteRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkCompleteRes.html"><span class="name">WorkCompleteRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkCompleteResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After a job is completed, the server will translate the received WORK_COMPLETE
+request from worker to WORK_COMPLETE response and send it to client.</p><div class="fullcomment"><div class="comment cmt"><p>After a job is completed, the server will translate the received WORK_COMPLETE
+request from worker to WORK_COMPLETE response and send it to client.</p><p>This response presents the WORK_COMPLETE response from server
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the data</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkCompleteReq.html" class="extype" name="org.gearman.message.WorkCompleteReq">WorkCompleteReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkDataReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkDataReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkDataReq:WorkDataReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkDataReq.html"><span class="name">WorkDataReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkDataReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Worker can send one or more data packet to client during the job processing.</p><div class="fullcomment"><div class="comment cmt"><p>Worker can send one or more data packet to client during the job processing.
+The WORK_DATA request message is used for this purpose. The server will
+forward the work data to client by translating the WORK_DATA request message
+to WORK_DATA response message.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the work data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p>WorkDataRes</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkDataRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkDataResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkDataRes:WorkDataRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkDataRes.html"><span class="name">WorkDataRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkDataResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After getting the WORK_DATA request from the worker, the server will translate
+it to WORK_DATA response and send it to client.</p><div class="fullcomment"><div class="comment cmt"><p>After getting the WORK_DATA request from the worker, the server will translate
+it to WORK_DATA response and send it to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the work data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkDataReq.html" class="extype" name="org.gearman.message.WorkDataReq">WorkDataReq</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkExceptionReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkExceptionReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkExceptionReq:WorkExceptionReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkExceptionReq.html"><span class="name">WorkExceptionReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkExceptionReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">worker sends the WORK_EXCEPTION request to server to indicate exception occuring
+during the job processing.</p><div class="fullcomment"><div class="comment cmt"><p>worker sends the WORK_EXCEPTION request to server to indicate exception occuring
+during the job processing. The server then will translate the WORK_EXCEPTION
+request to WORK_EXCEPTION response and send it to client.</p><p>The server will identify the job is finished and clean the resources occupied
+by the job.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the exception data
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkExceptionRes.html" class="extype" name="org.gearman.message.WorkExceptionRes">WorkExceptionRes</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkExceptionRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkExceptionResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkExceptionRes:WorkExceptionRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkExceptionRes.html"><span class="name">WorkExceptionRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkExceptionResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After getting a WORK_EXCEPTION request from worker, the server will translate
+the request to WORK_EXCEPTION response and send it to client.</p><div class="fullcomment"><div class="comment cmt"><p>After getting a WORK_EXCEPTION request from worker, the server will translate
+the request to WORK_EXCEPTION response and send it to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the exception data</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkExceptionReq.html" class="extype" name="org.gearman.message.WorkExceptionReq">WorkExceptionReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkFailReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkFailReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkFailReq:WorkFailReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkFailReq.html"><span class="name">WorkFailReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkFailReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">If fail to process a job, the worker will send WORK_FAIL request to server.</p><div class="fullcomment"><div class="comment cmt"><p>If fail to process a job, the worker will send WORK_FAIL request to server. Then
+the server will translate the WORK_FAIL response and send the translated response
+to client.</p><p>This class represents the WORK_FAIL request from woker to server
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkFailRes.html" class="extype" name="org.gearman.message.WorkFailRes">WorkFailRes</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkFailRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkFailResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkFailRes:WorkFailRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkFailRes.html"><span class="name">WorkFailRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkFailResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After getting a WORK_FAIL request from worker, the server will translate it
+to WORK_FAIL response message and send this response message to client.</p><div class="fullcomment"><div class="comment cmt"><p>After getting a WORK_FAIL request from worker, the server will translate it
+to WORK_FAIL response message and send this response message to client.</p><p>This class represents the WORK_FAIL response message from server to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkFailReq.html" class="extype" name="org.gearman.message.WorkFailReq">WorkFailReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkStatusReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkStatusReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkStatusReq:WorkStatusReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkStatusReq.html"><span class="name">WorkStatusReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="percentCompleteNumerator">percentCompleteNumerator: <span class="extype" name="scala.Int">Int</span></span>, <span name="percentCompleteDenominator">percentCompleteDenominator: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkStatusReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">If a long time job is got, the worker should report the job progress by sending
+WORK_STATUS_REQ to server and then the server will convert the WORK_STATUS_REQ to
+WORK_STATUS_RES and send the WORK_STATUS_RES to client.</p><div class="fullcomment"><div class="comment cmt"><p>If a long time job is got, the worker should report the job progress by sending
+WORK_STATUS_REQ to server and then the server will convert the WORK_STATUS_REQ to
+WORK_STATUS_RES and send the WORK_STATUS_RES to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">percentCompleteNumerator</dt><dd class="cmt"><p>the complete percentage numerator</p></dd><dt class="param">percentCompleteDenominator</dt><dd class="cmt"><p>the complete percentage denominator
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkStatusRes.html" class="extype" name="org.gearman.message.WorkStatusRes">WorkStatusRes</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkStatusRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkStatusResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkStatusRes:WorkStatusRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkStatusRes.html"><span class="name">WorkStatusRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="percentCompleteNumerator">percentCompleteNumerator: <span class="extype" name="scala.Int">Int</span></span>, <span name="percentCompleteDenominator">percentCompleteDenominator: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkStatusResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After submitting a long time job to the server, the server will schedule it
+to a specific worker.</p><div class="fullcomment"><div class="comment cmt"><p>After submitting a long time job to the server, the server will schedule it
+to a specific worker. The worker may report the progress of the job status to
+server and the server will forward the progress to the client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">percentCompleteNumerator</dt><dd class="cmt"><p>the complete percentage numerator</p></dd><dt class="param">percentCompleteDenominator</dt><dd class="cmt"><p>the complete percentage denominator
+</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkStatusReq.html" class="extype" name="org.gearman.message.WorkStatusReq">WorkStatusReq</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkWarningReq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkWarningReqextendsBinMessagewithBinRequestwithProductwithSerializable"></a>
+      <a id="WorkWarningReq:WorkWarningReq"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkWarningReq.html"><span class="name">WorkWarningReq</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinRequest.html" class="extype" name="org.gearman.message.BinRequest">BinRequest</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkWarningReqextendsBinMessagewithBinRequestwithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">The worker sends WORK_WARING request to server to indicate warning occurs during
+the job processing.</p><div class="fullcomment"><div class="comment cmt"><p>The worker sends WORK_WARING request to server to indicate warning occurs during
+the job processing.</p><p>The server will translate the WORK_WARING request to WORK_WARING response and
+forward it to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the warning data</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkWarningRes.html" class="extype" name="org.gearman.message.WorkWarningRes">WorkWarningRes</a>
+</p></span></dd></dl></div>
+    </li><li name="org.gearman.message.WorkWarningRes" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="WorkWarningResextendsBinMessagewithBinResponsewithProductwithSerializable"></a>
+      <a id="WorkWarningRes:WorkWarningRes"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="WorkWarningRes.html"><span class="name">WorkWarningRes</span></a><span class="params">(<span name="jobHandle">jobHandle: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="data">data: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <a href="BinMessage.html" class="extype" name="org.gearman.message.BinMessage">BinMessage</a> with <a href="BinResponse.html" class="extype" name="org.gearman.message.BinResponse">BinResponse</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@WorkWarningResextendsBinMessagewithBinResponsewithProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">After getting a WORK_WARING request, the server will translate it to a WORK_WARING
+response and send it to client.</p><div class="fullcomment"><div class="comment cmt"><p>After getting a WORK_WARING request, the server will translate it to a WORK_WARING
+response and send it to client.
+</p></div><dl class="paramcmts block"><dt class="param">jobHandle</dt><dd class="cmt"><p>the job handle</p></dd><dt class="param">data</dt><dd class="cmt"><p>the warning data</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="WorkWarningReq.html" class="extype" name="org.gearman.message.WorkWarningReq">WorkWarningReq</a>
+</p></span></dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        <div id="values" class="values members">
+              <h3>Value Members</h3>
+              <ol><li name="org.gearman.message.AdminRequest" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="AdminRequest"></a>
+      <a id="AdminRequest:AdminRequest"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="AdminRequest$.html"><span class="name">AdminRequest</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@AdminRequest" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li><li name="org.gearman.message.JobPriority" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="JobPriority"></a>
+      <a id="JobPriority:JobPriority"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="JobPriority$.html"><span class="name">JobPriority</span></a><span class="result"> extends <span class="extype" name="scala.Enumeration">Enumeration</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@JobPriority" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Job priority, three priority is defined:</p><div class="fullcomment"><div class="comment cmt"><p>Job priority, three priority is defined:</p><pre>Normal: the normal job priority
+Low: the Low priority
+High: the high priority</pre><p>The higher priority job will be scheduled by gearman server prior to the lower
+priority job
+</p></div></div>
+    </li><li name="org.gearman.message.Message" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Message"></a>
+      <a id="Message:Message"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Message$.html"><span class="name">Message</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.message.package@Message" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li></ol>
+            </div>
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>

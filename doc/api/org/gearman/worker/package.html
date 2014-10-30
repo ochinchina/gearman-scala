@@ -1,0 +1,178 @@
+<!DOCTYPE html >
+<html>
+        <head>
+          <title>worker - org.gearman.worker</title>
+          <meta name="description" content="worker - org.gearman.worker" />
+          <meta name="keywords" content="worker org.gearman.worker" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../../../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../../../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../../../index.html';
+            var hash = 'org.gearman.worker.package';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../../lib/package_big.png" />
+        <p id="owner"><a href="../../package.html" class="extype" name="org">org</a>.<a href="../package.html" class="extype" name="org.gearman">gearman</a></p>
+        <h1>worker</h1> <span class="permalink">
+      <a href="../../../index.html#org.gearman.worker.package" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <span class="name">worker</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        
+        
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="org.gearman.worker.GearmanWorker" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="GearmanWorkerextendsAnyRef"></a>
+      <a id="GearmanWorker:GearmanWorker"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="GearmanWorker.html"><span class="name">GearmanWorker</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.worker.package@GearmanWorkerextendsAnyRef" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Create a Worker with gearman server address and the max number of on-going jobs
+can be handled by the worker</p><div class="fullcomment"><div class="comment cmt"><p>Create a Worker with gearman server address and the max number of on-going jobs
+can be handled by the worker</p><p>The created worker will try to connect with all the servers listed in the <code> servers</code>
+parameter. If a server listed in the <code> servers</code> parameter can not be connected,
+the gearman server will try to connect it repeatedly until the connection is
+established.</p><p>User should call <a href="GearmanWorker.html#canDo(funcName:String,timeout:Int)(funcHandle:(String,Option[String],org.gearman.worker.JobResponser)=&gt;Unit):Unit" class="extmbr" name="org.gearman.worker.GearmanWorker#canDo">canDo</a> method with the function handler to tell the gearman
+server what type of the job this worker can do. The <a href="GearmanWorker.html#canDo(funcName:String,timeout:Int)(funcHandle:(String,Option[String],org.gearman.worker.JobResponser)=&gt;Unit):Unit" class="extmbr" name="org.gearman.worker.GearmanWorker#canDo">canDo</a> method can be called
+at any time.</p><p>The following piece of code demostrates how the worker works:</p><pre><span class="cmt">//connect to servers: 192.168.1.1 with port 4730 and 192.168.1.2 with port 4730</span>
+<span class="kw">val</span> worker = GearmanWorker( <span class="lit">"192.168.1.1:4730,192.168.1.2:4730"</span>)
+<span class="cmt">//tells the server this worker can do string reverse with a worker hander</span>
+<span class="cmt">//work handler accepts three parameters:</span>
+<span class="cmt">//-data: the data in the SUBMIT_JOB_XXX by client</span>
+<span class="cmt">//-uid: the unique identifier assigned by client in SUBMIT_JOB_XXX</span>
+<span class="cmt">//-responser: instance of JobResponser</span>
+worker.canDo( <span class="lit">"reverse"</span>) { <span class="kw">case</span> (data, uid, responser) <span class="kw">=&gt;</span>
+	<span class="cmt">//reverse the received string data & send result to the client</span>
+	responser complete reverse( data )
+ }
+
+<span class="kw">private</span> <span class="kw">def</span> reverse( s: <span class="std">String</span> ): <span class="std">String</span> = {
+	<span class="cmt">//implement your reverse algorithm</span>
+}</pre></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="JobResponser.html" class="extype" name="org.gearman.worker.JobResponser">JobResponser</a></p></span></dd></dl></div>
+    </li><li name="org.gearman.worker.JobResponser" visbl="pub" data-isabs="true" fullComment="yes" group="Ungrouped">
+      <a id="JobResponserextendsAnyRef"></a>
+      <a id="JobResponser:JobResponser"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a href="JobResponser.html"><span class="name">JobResponser</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.worker.package@JobResponserextendsAnyRef" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">responser for a job got from gearman server</p><div class="fullcomment"><div class="comment cmt"><p>responser for a job got from gearman server</p><p>When a job is fetched from the server side, the worker proccess the job and
+send the job status to the client through the <a href="JobResponser.html" class="extype" name="org.gearman.worker.JobResponser">JobResponser</a> interface</p><p>When the job finished, the worker must call one of following methods:</p><p>- <a href="JobResponser.html#complete(data:String):Unit" class="extmbr" name="org.gearman.worker.JobResponser#complete">complete</a></p><p>- <a href="JobResponser.html#fail:Unit" class="extmbr" name="org.gearman.worker.JobResponser#fail">fail</a></p><p>- <a href="JobResponser.html#exception(data:String):Unit" class="extmbr" name="org.gearman.worker.JobResponser#exception">exception</a>
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="GearmanWorker.html" class="extype" name="org.gearman.worker.GearmanWorker">GearmanWorker</a></p></span></dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        <div id="values" class="values members">
+              <h3>Value Members</h3>
+              <ol><li name="org.gearman.worker.GearmanWorker" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="GearmanWorker"></a>
+      <a id="GearmanWorker:GearmanWorker"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="GearmanWorker$.html"><span class="name">GearmanWorker</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../index.html#org.gearman.worker.package@GearmanWorker" title="Permalink" target="_top">
+        <img src="../../../lib/permalink.png" />
+      </a>
+    </span>
+      
+    </li></ol>
+            </div>
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>
