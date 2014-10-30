@@ -32,29 +32,160 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
- * the job callback. When gearman client submits a job to gearman server, a job
- * callback must be provided to receive job related data. 
+ * After submitting a job to the server, who will schedule the job to the registered
+ * worker, the worker will send the status of the job to the sender. The client
+ * will convert the gearman message to [[JobEvent]] and dispatch it to the job callback
+ * in the method [[GearmanClient.submitJob]].  
+ * 
+ * This interface is just used to identify a JobEvent without any data members and
+ * methods.
+ * 
+ * @see [[GearmanClient.submitJob]]       
  * 
  * @author Steven Ou  
  */
 trait JobEvent
 
+/**
+ * Client will convert the WORK_DATA message to a JobData event
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param data the data part in the WORK_DATA message  
+ *
+ */  
 case class JobData( data: String ) extends JobEvent
+/**
+ * Client will convert the WORK_WARNING message to a JobWarning event
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param data the data part in the WORK_WARNING message  
+ *
+ */  
 case class JobWarning( data: String ) extends JobEvent
+
+/**
+ * This event will be used in following two situations:
+ *
+ * <p>
+ * 1, Client submit a job, the worker sends WORK_STATUS to the client to update
+ * the job status. At this time, both the {@code knownStatus } and the {@code runningStatus}
+ * are true.
+ * 
+ * <p>
+ * 2, Client query the status of submitted job by invoking [[getStatus]] method, the
+ * server will send the GET_STATUS_RES to the client. The GET_STATUS_RES message will
+ * also be converted to [[JobStatus]] event. At this time, the {@code knownStatus} and
+ * {@code runningStatus} reflects the status of the job              
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param knownStatus true if the status of submitted job is known, false if the status of submitted job is unknown
+ * @param runningStatus true the submitted job is in running state, false if the submitted job is still in pending state
+ * @param numerator the complete percentage numerator
+ * @param denominator the complete percentage denominator      
+ *
+ */  
 case class JobStatus( knownStatus:Boolean, runningStatus: Boolean, numerator: Int, denominator: Int  ) extends JobEvent
+
+/**
+ * Client will convert the WORK_COMPLETE message to a JobComplete event
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param data the data part in the WORK_COMPLETE message  
+ *
+ */  
 case class JobComplete( data: String  ) extends JobEvent
+
+/**
+ * Client will convert the WORK_FAIL message to a JobFail event
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param data the data part in the WORK_FAIL message  
+ *
+ */ 
 case class JobFail() extends JobEvent
+
+/**
+ * Client will convert the WORK_EXCEPTION message to a JobFail event
+ * 
+ * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
+ * 
+ * @param data the data part in the WORK_EXCEPTION message  
+ *
+ */ 
 case class JobException( data: String ) extends JobEvent
+
+/**
+ * if the connection to gearman server is lost, the on-going jobs will get
+ * connection lost event
+ */ 
 case class JobConnectionLost() extends JobEvent
+
+/**
+ * if the timeout parameter is set in the [[GearmanClient.submitJob]], a timer
+ * will be started to monitor if the job can be finished before timeout. If the
+ * job is not finished( not get JobComplete, JobException or JobFail event), the
+ * job will receive a [[JobTimeout]] event in its callback    
+ *
+ */  
 case class JobTimeout() extends JobEvent
 
 
 /**
- *  construct a GearmanClient object
+ *  represents the client side in gearman protocol. When a user can submit a job
+ *  to the server and server will schedule the job to a worker. The worker will
+ *  report the job status to the client.
+ *  
+ *  ==submit job to server==
+ *  User can submit a job to server by calling [[submitJob] method. The following
+ *  code demostrates how a user can submit job to server
+ *  
+ * {{{
+ * //connect to one of following servers:
+ * // 192.168.1.1 with port number 4730
+ * // 192.168.1.2 with port number 4730
+ * //If the connection to server is broken, client will connect to the server in
+ * //the background automatically      
+ * val client = GearmanClient( "192.168.1.1:4730,192.168.1.2:4730")
+ *
+ * //submit a job with "reverse" function name, data "hello, world!" and a job
+ * //callback which accepts the JobEvent    
+ * client.submitJob( "reverse", "hello, world!") {
+ *  //print the reverse string of "hello,world" 
+ * 	case JobComplete( result ) => println( result )
+ * 	case JobConnectionLost() => println( "connect lost to the server")  
+ * }   
+ * }}}   
+ *    
+ *  ==submit a background job to server==   
+ *  
+ *  A background job can be submitted to the server if the client don't want
+ *  to get the status of the submitted job. Following code demostrates how to
+ *  submit a background job from client side:
+ *  
+ * {{{
+ * //connect to one of following servers:
+ * // 192.168.1.1 with port number 4730
+ * // 192.168.1.2 with port number 4730
+ * //If the connection to server is broken, client will connect to the server in
+ * //the background automatically      
+ * val client = GearmanClient( "192.168.1.1:4730,192.168.1.2:4730")
+ * 
+ * //submit a background job with function name "WriteToFile" and data "hello, world!"
+ * client.submitJobBg( "WriteToFile", "hello, world!")   
+ * }}}        
  *                    
  * @param servers the gearman server address list, the address list is in
  * "server1:port,server2:port,...,servern:port"
- * @param maxOnGoingJobs the max number of jobs can be sent to gearman server
+ * @param maxOnGoingJobs > 0 the max number of jobs can be submitted to gearman server,
+ * <=0 no limitation on the jobs submitted to gearman server at same time
+ * <p>
+ * if the number of submitted job reaches the {@code maxOnGoingJobs} limitation, the
+ * submitJob method will put the job to local queue until a running job is finished.     
  * 
  */ 
 class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
@@ -266,10 +397,11 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	/**
 	 *  get the job status
 	 *  
-	 * @param jobHandle the job handle
+	 * @param jobHandle the job handle returned from [[submitJob]] or [[submitJobBg]]
 	 * @param timeout the optional timeout, if no timeout is provided, the defMsgTimeout
 	 * will be used
-	 * 
+	 *
+	 * @see [[submitJob]] [[submitJobBg]]	  
 	 * @return the job status	 	 
 	 */
 	def getStatus(  jobHandle: String, timeout: Int = -1 ) : Future[ JobStatus ] = {
@@ -296,7 +428,10 @@ class GearmanClient( servers: String, maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	/**
-	 *  do graceful shutdown
+	 *  shutdown the client gracefully.
+	 *  
+	 *  The on-going job will be finished and all the submitted jobs will fail
+	 *  ( by checking the returned Future in the [[submitJob]]/[[submitJobBg]]	 	 	 
 	 */	 	
 	def shutdown {
 		stopped = true

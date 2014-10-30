@@ -32,16 +32,27 @@ import ExecutionContext.Implicits.global
 
 /**
  * responser for a job got from gearman server
+ *
+ * When a job is fetched from the server side, the worker proccess the job and
+ * send the job status to the client through the [[JobResponser]] interface
  * 
- *    
+ * When the job finished, the worker must call one of following methods:
  * 
+ * - [[complete]]
+ * <p> 
+ * - [[fail]]
+ * <p> 
+ * - [[exception]]    
+ *       
+ * @see [[GearmanWorker]] 
  * @author Steven Ou  
  */ 
 trait JobResponser {
 	/**
 	 * The worker sends updates, partial results or flushes data during long
 	 * running job.	 
-	 * 
+	 *
+	 * The client will get a [[org.gearman.client.JobData]] event	  
 	 *  
 	 * @param data the data sent to client	 
 	 */	 	
@@ -49,6 +60,8 @@ trait JobResponser {
 	
 	/**
 	 * send the status of the work to the client
+	 * 
+	 * The client will get a [[org.gearman.client.JobStatus]] event	 	 
 	 * 
 	 * @param numerator the percentage of numerator about the job
 	 * @param denominator the percentage of denominator about the job 	 	 	 
@@ -58,6 +71,8 @@ trait JobResponser {
 	/**
 	 * send a warning data to client
 	 * 
+	 * The client will get a [[org.gearman.client.JobWarning]] event	 	 
+	 * 
 	 * @param data the warning data	 	 
 	 */	 		 
 	def warning( data: String )
@@ -65,17 +80,23 @@ trait JobResponser {
 	/**
 	 * indicate the job is completed
 	 * 
+	 * The client will get a [[org.gearman.client.JobComplete]] event	 	 
+	 * 
 	 * @param data the data to be sent to client when the job completed	 	 
 	 */	 	
 	def complete( data: String )
 	
 	/**
 	 *  indicate the job is failed
+	 *  
+	 * The client will get a [[org.gearman.client.JobFail]] event	 	 
 	 */	 	
 	def fail
 	
 	/**
 	 *  indicate exception occurs when processing the job
+	 *  
+	 * The client will get a [[org.gearman.client.JobException]] event	 	 
 	 *  
 	 * @param data the exception data	 	 
 	 */	 	
@@ -206,15 +227,44 @@ private class DefJobResponser( jobHandle: String, channel: MessageChannel, jobCo
 }
 
 /**
- * create a Worker with gearman server address and the max number of on-going jobs
- * can be handled by the worker  
- *
+ * Create a Worker with gearman server address and the max number of on-going jobs
+ * can be handled by the worker
+ * 
+ * The created worker will try to connect with all the servers listed in the {@code servers}
+ * parameter. If a server listed in the {@code servers} parameter can not be connected,
+ * the gearman server will try to connect it repeatedly until the connection is
+ * established.  
+ *                                 
+ * User should call [[canDo]] method with the function handler to tell the gearman
+ * server what type of the job this worker can do. The [[canDo]] method can be called
+ * at any time.
+ * 
+ * The following piece of code demostrates how the worker works:
+ * {{{
+ * //connect to servers: 192.168.1.1 with port 4730 and 192.168.1.2 with port 4730
+ * val worker = GearmanWorker( "192.168.1.1:4730,192.168.1.2:4730")
+ * //tells the server this worker can do string reverse with a worker hander
+ * //work handler accepts three parameters:
+ * //-data: the data in the SUBMIT_JOB_XXX by client 
+ * //-uid: the unique identifier assigned by client in SUBMIT_JOB_XXX
+ * //-responser: instance of JobResponser     
+ * worker.canDo( "reverse") { case (data, uid, responser) =>
+ * 	//reverse the received string data & send result to the client 
+ *		responser complete reverse( data )    
+ *  }             
+ *  
+ *	private def reverse( s: String ): String = {
+ *		//implement your reverse algorithm 
+ *	}    
+ * }}}              
+ * 
  * @param servers the server address in "server1:port1,server2:port2,...,servern:portn"
  * format. If multiple gearman servers are provided, the worker will try to connect to 
  * all the gearman servers and get the job from them
  *
  * @param maxOnGoingJobs max number of jobs can be processed concurrently by worker
  * 
+ * @see [[JobResponser]] 
  * @author Steven Ou         
  */  
 class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
@@ -232,7 +282,9 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	start
 	
 	/**
-	 * tells the gearman server what work the worker can do
+	 * tells the gearman server what work the worker can do with the function
+	 * handler that handles jobs fetched from server	 
+	 * 
 	 *
 	 * @param funcName what function can be done by this worker
 	 * @param timeout > 0 the job with function name {@code funcName} can be finished
@@ -285,16 +337,12 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	/**
-	 *  shutdown the worker
+	 *  shutdown the worker in block mode
 	 *  
-	 * If the {@code graceful} is true, the worker will wait for all on-going
-	 * job completed and then disconnect with gearman server.
-	 * 
-	 * If the {@code graceful} is false, the worker will disconnect with gearman
-	 * server immediatelly even if there are on-going jobs.	 	 	 	 	 	 
-	 *  
-	 * @param graceful true shutdown the job in graceful way, false shutdown
-	 * the worker immediatelly even if there are on-going job	  	 	 
+	 * @param graceful true shutdown the worker in graceful way: 1) will not fetch
+	 * any jobs from server 2) waiting for all on-going jobs completed	 
+	 * <p>	                                 
+	 * false shutdown the worker immediatelly even if there are on-going job	  	 	 
 	 */	 	
 	def shutdown( graceful: Boolean ) {
 		stopped = true
@@ -382,7 +430,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	}
 	
 	private def grabJob( channel: MessageChannel ) {
-		if( !stopped && (maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) ) channel.send( GrabJob() ) else channel.send( PreSleep() )
+		if( !stopped && (maxOnGoingJobs <= 0 || jobs.size < maxOnGoingJobs ) ) channel.send( GrabJobUniq() ) else channel.send( PreSleep() )
 	}
 	
 	private def broadcast( msg: Message ) {		

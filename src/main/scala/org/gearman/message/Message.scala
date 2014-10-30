@@ -375,6 +375,8 @@ trait BinResponse extends BinMessage {
 
 /**
  * represents the CAN_DO request message
+ * <p>
+ * worker tells server what it can do by sending CAN_DO request message to the server   
  * 
  * @param funcName the name of function that a worker can do  
  */ 
@@ -387,6 +389,8 @@ case class CanDo( funcName: String ) extends BinRequest {
 
 /**
  * represents the CANT_DO request message
+ * <p>
+ * worker tells server it will not do a work, that it can do before, anymore  
  * 
  * @param funcName the name of function that a worker can't do any more  
  */ 
@@ -400,7 +404,9 @@ case class CantDo( funcName: String ) extends BinRequest {
 
 /**
  * represents the RESET_ABILITIES request message sent to gearman server by
- * a worker 
+ * a worker
+ * 
+ * <p>worker tells the server it will not do any work now   
  */ 
 case class ResetAbilities() extends BinRequest {
 	protected [this] override def getType = Message.RESET_ABILITIES
@@ -440,6 +446,8 @@ case class Noop() extends BinResponse {
 
 /**
  * represents the SUBMIT_JOB request message sent to gearman server by a client
+ * <p>
+ * server replies a JOB_CREATED response to client after it accepts the submitted job  
  * 
  * @param funcName function name
  * @param uniqueId the user-provided unique identifier
@@ -571,6 +579,20 @@ case class WorkStatusRes(jobHandle: String, percentCompleteNumerator: Int, perce
 	}
 }
 
+/**
+ * If a job processing is completed and no any error, the worker will send 
+ * WORK_COMPLETE request message to the server. Then the server will translate the
+ * WORK_COMPLETE request message to WORK_COMPLETE response message and send to 
+ * the client.
+ * 
+ * This request presents the WORK_COMPLETE request from worker to server.  
+ * 
+ * @param jobHandle the job handle
+ * @param data the data
+ * 
+ * @see [[WorkCompleteRes]]      
+ *     
+ */ 
 case class WorkCompleteReq(jobHandle: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.WORK_COMPLETE
 	override protected def writeBody( out: DataOutputStream ) {
@@ -580,7 +602,16 @@ case class WorkCompleteReq(jobHandle: String, data: String) extends BinRequest {
 	}
 }
 
-
+/**
+ * After a job is completed, the server will translate the received WORK_COMPLETE
+ * request from worker to WORK_COMPLETE response and send it to client.
+ * 
+ * This response presents the WORK_COMPLETE response from server
+ * 
+ * @param jobHandle the job handle
+ * @param data the data       
+ * @see [[WorkCompleteReq]]
+ */  
 case class WorkCompleteRes(jobHandle: String, data: String) extends BinResponse {
 	protected [this] override def getType = Message.WORK_COMPLETE
 	override protected def writeBody( out: DataOutputStream ) {
@@ -590,6 +621,17 @@ case class WorkCompleteRes(jobHandle: String, data: String) extends BinResponse 
 	}
 }
 
+/**
+ * If fail to process a job, the worker will send WORK_FAIL request to server. Then 
+ * the server will translate the WORK_FAIL response and send the translated response
+ * to client.
+ * 
+ * This class represents the WORK_FAIL request from woker to server
+ * 
+ * @param jobHandle the job handle
+ * 
+ * @see [[WorkFailRes]]        
+ */ 
 case class WorkFailReq(jobHandle: String) extends BinRequest {
 	protected [this] override def getType = Message.WORK_FAIL
 	override protected def writeBody( out: DataOutputStream ) {
@@ -597,7 +639,16 @@ case class WorkFailReq(jobHandle: String) extends BinRequest {
 	}
 }
 
-
+/**
+ * After getting a WORK_FAIL request from worker, the server will translate it
+ * to WORK_FAIL response message and send this response message to client.
+ * 
+ * This class represents the WORK_FAIL response message from server to client.
+ * 
+ * @param jobHandle the job handle
+ *       
+ * @see [[WorkFailReq]]
+ */ 
 case class WorkFailRes(jobHandle: String) extends BinResponse {
 	protected [this] override def getType = Message.WORK_FAIL
 	override protected def writeBody( out: DataOutputStream ) {
@@ -605,6 +656,17 @@ case class WorkFailRes(jobHandle: String) extends BinResponse {
 	}
 }
 
+/**
+ * After submitting a job to server, the client can query the status of job
+ * by sending this request message to server at any time before job is completed.
+ * 
+ * The server will query the job status and send it to client by [[StatusRes]]
+ * message.
+ * 
+ * @param jobHandle the job handle
+ * @see [[StatusRes]]        
+ *  
+ */ 
 case class GetStatus( jobHandle: String ) extends BinRequest {
 	protected [this] override def getType = Message.GET_STATUS
 	override protected def writeBody( out: DataOutputStream ) {
@@ -612,6 +674,15 @@ case class GetStatus( jobHandle: String ) extends BinRequest {
 	}
 }
 
+/**
+ * A client can ping a server by sending a ECHO request to server to check if 
+ * the server works ok.
+ * 
+ * @param data the data send to server, the server will send this data back to
+ * client if it works. 
+ *
+ * @see [[EchoRes]]      
+ */ 
 case class EchoReq( data: String ) extends BinRequest {
 
 	protected [this] override def getType = Message.ECHO_REQ
@@ -621,6 +692,12 @@ case class EchoReq( data: String ) extends BinRequest {
 	}
 }
 
+/**
+ * represents the ECHO response to client after server receives ECHO request
+ *
+ * @param data the data echoed to client
+ * @see [[EchoReq]]  
+ */  
 case class EchoRes( data: String ) extends BinResponse {
 	protected [this] override def getType = Message.ECHO_RES
 	override protected def writeBody( out: DataOutputStream ) {
@@ -628,7 +705,16 @@ case class EchoRes( data: String ) extends BinResponse {
 	}
 }
 
-
+/**
+ * submit a job to the server in background. If a job is a background job, the
+ * client will not receive the job status from server except it queries the job
+ * status by sending GET_STATUS request to server.
+ * 
+ * @param funcName the function name
+ * @param uniqueId the unique identifier assigned to job by client
+ * @param data the job data       
+ *
+ */  
 case class SubmitJobBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.SUBMIT_JOB_BG
 	override protected def writeBody( out: DataOutputStream ) {
@@ -640,6 +726,13 @@ case class SubmitJobBg(funcName: String, uniqueId: String, data: String) extends
 	}
 }
 
+/**
+ * if any error occurs at the server side, an ERROR message will be sent by 
+ * server.
+ * 
+ * @param code the error code
+ * @param text the error hints     
+ */ 
 case class Error( code: String, text: String) extends BinResponse {
 	protected [this] override def getType = Message.ERROR
 	override protected def writeBody( out: DataOutputStream ) {
@@ -649,6 +742,21 @@ case class Error( code: String, text: String) extends BinResponse {
 	}
 }
 
+/**
+ * After receiving a GET_STATUS request from the client, the server will check
+ * the job status and replies the client.  
+ *
+ * @param jobHandle the job handle
+ * @param knownStatus true the server knows the job status, false the server does
+ * not know the job status
+ * @param runningStatus true the job is running(processing by a worker), false the 
+ * job is not running( no any worker processes the job)
+ * @param percentCompleteNumerator the percentage complete numerator ( only valid if
+ * {@code knownStatus} is true )
+ * @param percentCompleteDenominator the percentage complete denominator ( only valid if
+ * {@code knownStatus} is true )        
+ * @see [[GetStatus]] 
+ */ 
 case class StatusRes( jobHandle: String, knownStatus: Boolean, runningStatus: Boolean, percentCompleteNumerator: Int, percentCompleteDenominator:Int ) extends BinResponse {
 	protected [this] override def getType = Message.STATUS_RES
 	override protected def writeBody( out: DataOutputStream ) {
@@ -664,6 +772,18 @@ case class StatusRes( jobHandle: String, knownStatus: Boolean, runningStatus: Bo
 	}
 }
 
+/**
+ * submit a high priority job.
+ * 
+ * please refer to [[SubmitJob]]
+ * 
+ * @param funcName the function name
+ * @param unqiueId the unique identifier assigned by client
+ * @param data the job data
+ * 
+ * @see [[SubmitJob]]        
+ *
+ */  
 case class SubmitJobHigh(funcName: String, uniqueId: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.SUBMIT_JOB_HIGH
 	override protected def writeBody( out: DataOutputStream ) {
@@ -675,6 +795,13 @@ case class SubmitJobHigh(funcName: String, uniqueId: String, data: String) exten
 	}
 }
 
+/**
+ * A worker can set its identifier for administrative purpose. A user can connect
+ * to server from telnet/nc and if he/she enters "workers", the worker identifier
+ * will be shown in the response lines. 
+ * 
+ * @param workerId the worker identifier  
+ */  
 case class SetClientId( workerId: String ) extends BinRequest {
 	protected [this] override def getType = Message.SET_CLIENT_ID
 	override protected def writeBody( out: DataOutputStream ) {
@@ -682,6 +809,18 @@ case class SetClientId( workerId: String ) extends BinRequest {
 	}
 }
 
+/**
+ * A worker tells server it can do a work within a limited seconds by sending
+ * CAN_DO_TIMEOUT request to server.
+ * 
+ * If the job is still not completed within the given time, the server will think
+ * the job is failed and WORK_FAIL message will be sent to client.   
+ * 
+ * @param funcName the function name
+ * @param timeout timeout in seconds   
+ *  
+ * @see [[WorkFailRes]]
+ */  
 case class CanDoTimeout(funcName: String, timeout: Int ) extends BinRequest {
 	protected [this] override def getType = Message.CAN_DO_TIMEOUT
 	override protected def writeBody( out: DataOutputStream ) {
@@ -697,6 +836,20 @@ class AllYours extends BinRequest {
 	}
 }
 
+/**
+ * worker sends the WORK_EXCEPTION request to server to indicate exception occuring
+ * during the job processing. The server then will translate the WORK_EXCEPTION
+ * request to WORK_EXCEPTION response and send it to client.
+ * 
+ * The server will identify the job is finished and clean the resources occupied
+ * by the job. 
+ * 
+ * @param jobHandle the job handle
+ * @param data the exception data
+ * 
+ * @see [[WorkExceptionRes]]     
+ *
+ */  
 case class WorkExceptionReq( jobHandle: String, data: String ) extends BinRequest {
 	protected [this] override def getType = Message.WORK_EXCEPTION
 	override protected def writeBody( out: DataOutputStream ) {
@@ -706,6 +859,14 @@ case class WorkExceptionReq( jobHandle: String, data: String ) extends BinReques
 	}
 }
 
+/**
+ * After getting a WORK_EXCEPTION request from worker, the server will translate
+ * the request to WORK_EXCEPTION response and send it to client.
+ * 
+ * @param jobHandle the job handle
+ * @param data the exception data
+ * @see [[WorkExceptionReq]]     
+ */  
 case class WorkExceptionRes( jobHandle: String, data: String ) extends BinResponse {
 	protected [this] override def getType = Message.WORK_EXCEPTION
 	override protected def writeBody( out: DataOutputStream ) {
@@ -715,6 +876,14 @@ case class WorkExceptionRes( jobHandle: String, data: String ) extends BinRespon
 	}
 }
 
+/**
+ * set the server options
+ * 
+ * @param opt the option set to the server
+ * 
+ * @see [[OptionRes]]    
+ *
+ */  
 case class OptionReq( opt: String) extends BinRequest {
 	protected [this] override def getType = Message.OPTION_REQ
 	override protected def writeBody( out: DataOutputStream ) {
@@ -722,6 +891,14 @@ case class OptionReq( opt: String) extends BinRequest {
 	}
 }
 
+/**
+ * After processing the OPTION request from client, the server should send
+ * an OPTION response to the client to indicate the success/failure.  
+ *
+ * @param opt the response data
+ * 
+ * @see [[OptionReq]]   
+ */  
 case class OptionRes( opt: String) extends BinRequest {
 	protected [this] override def getType = Message.OPTION_RES
 	override protected def writeBody( out: DataOutputStream ) {
@@ -729,6 +906,18 @@ case class OptionRes( opt: String) extends BinRequest {
 	}
 }
 
+/**
+ * Worker can send one or more data packet to client during the job processing.
+ * The WORK_DATA request message is used for this purpose. The server will
+ * forward the work data to client by translating the WORK_DATA request message
+ * to WORK_DATA response message.
+ * 
+ * @param jobHandle the job handle
+ * @param data the work data
+ * 
+ * @see [[WorkDataRes]]           
+ *
+ */  
 case class WorkDataReq( jobHandle: String, data: String ) extends BinRequest {
 	protected [this] override def getType = Message.WORK_DATA
 	override protected def writeBody( out: DataOutputStream ) {
@@ -738,6 +927,16 @@ case class WorkDataReq( jobHandle: String, data: String ) extends BinRequest {
 	}
 }
 
+/**
+ * After getting the WORK_DATA request from the worker, the server will translate
+ * it to WORK_DATA response and send it to client.
+ * 
+ * @param jobHandle the job handle
+ * @param data the work data
+ * 
+ * @see [[WorkDataReq]]      
+ *
+ */  
 case class WorkDataRes( jobHandle: String, data: String ) extends BinResponse {
 	protected [this] override def getType = Message.WORK_DATA
 	override protected def writeBody( out: DataOutputStream ) {
@@ -747,6 +946,17 @@ case class WorkDataRes( jobHandle: String, data: String ) extends BinResponse {
 	}
 }
 
+/**
+ * The worker sends WORK_WARING request to server to indicate warning occurs during
+ * the job processing.
+ *  
+ * The server will translate the WORK_WARING request to WORK_WARING response and
+ * forward it to client.
+ * 
+ * @param jobHandle the job handle
+ * @param data the warning data        
+ * @see [[WorkWarningRes]]
+ */  
 case class WorkWarningReq( jobHandle: String, data: String ) extends BinRequest {
 	protected [this] override def getType = Message.WORK_WARNING
 	override protected def writeBody( out: DataOutputStream ) {
@@ -756,6 +966,14 @@ case class WorkWarningReq( jobHandle: String, data: String ) extends BinRequest 
 	}
 }
 
+/**
+ * After getting a WORK_WARING request, the server will translate it to a WORK_WARING
+ * response and send it to client.
+ * 
+ * @param jobHandle the job handle
+ * @param data the warning data        
+ * @see [[WorkWarningReq]]
+ */  
 case class WorkWarningRes( jobHandle: String, data: String ) extends BinResponse {
 	protected [this] override def getType = Message.WORK_WARNING
 	override protected def writeBody( out: DataOutputStream ) {
@@ -765,13 +983,32 @@ case class WorkWarningRes( jobHandle: String, data: String ) extends BinResponse
 	}
 }
 
-
+/**
+ * worker sends GRAB_JOB_UNIQ request to server to get a job with uniqueId.
+ * 
+ * If a Job is available, the server will replies with a JOB_ASSIGN_UNIQ response  
+ * 
+ * @see [[JobAssignUniq]]   
+ *
+ */  
 case class GrabJobUniq() extends BinRequest {
 	protected [this] override def getType = Message.GRAB_JOB_UNIQ
 	override protected def writeBody( out: DataOutputStream ) {
 	}
 }
 
+/**
+ * After getting GRAB_JOB_UNIQ request, if a job is available, the server will
+ * send JOB_ASSIGN_UNIQ response to worker.
+ * 
+ * @param jobHandle the job handle
+ * @param funcName the function name 
+ * @param id the unique identifier assigned by user when submitting job
+ * @param data the job data
+ * 
+ * @see [[GrabJobUniq]]        
+ *
+ */  
 case class JobAssignUniq( jobHandle: String, funcName: String, id: String, data: String ) extends BinResponse {
 	protected [this] override def getType = Message.JOB_ASSIGN_UNIQ
 	override protected def writeBody( out: DataOutputStream ) {
@@ -785,6 +1022,17 @@ case class JobAssignUniq( jobHandle: String, funcName: String, id: String, data:
 	}
 }
 
+/**
+ * submit a high priority job in background
+ * 
+ * Please refer to [[SubmitJobBg]]  
+ *
+ * @param funcName the function name
+ * @param unqiueId the unique identifier assigned by client
+ * @param data the job data
+ * 
+ * @see [[SubmitJob]]  
+ */  
 case class SubmitJobHighBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.SUBMIT_JOB_HIGH_BG
 	override protected def writeBody( out: DataOutputStream ) {
@@ -796,6 +1044,17 @@ case class SubmitJobHighBg(funcName: String, uniqueId: String, data: String) ext
 	}
 }
 
+/**
+ * submit a low priority job
+ * 
+ * Please refer to [[SubmitJob]]  
+ *
+ * @param funcName the function name
+ * @param unqiueId the unique identifier assigned by client
+ * @param data the job data
+ * 
+ * @see [[SubmitJob]]  
+ */  
 case class SubmitJobLow(funcName: String, uniqueId: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.SUBMIT_JOB_LOW
 	override protected def writeBody( out: DataOutputStream ) {
@@ -807,6 +1066,17 @@ case class SubmitJobLow(funcName: String, uniqueId: String, data: String) extend
 	}
 }
 
+/**
+ * submit a low priority job in background
+ * 
+ * Please refer to [[SubmitJobBg]]  
+ *
+ * @param funcName the function name
+ * @param unqiueId the unique identifier assigned by client
+ * @param data the job data
+ * 
+ * @see [[SubmitJobBg]]  
+ */  
 case class SubmitJobLowBg(funcName: String, uniqueId: String, data: String) extends BinRequest {
 	protected [this] override def getType = Message.SUBMIT_JOB_LOW_BG
 	override protected def writeBody( out: DataOutputStream ) {

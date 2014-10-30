@@ -26,6 +26,10 @@ Before using gearman, we need to compile it
 ```
 
 * run "sbt test:compile" to compile the gearman
+```shell
+	$ cd gearman-scala
+	$ sbt test::compile
+```
 
 #A Simple Example
 
@@ -81,7 +85,7 @@ After the worker is ready, start it like below:
 scala -classpath <classpath> yourWorker
 ```
 
-##write gearman & start client
+##write & start client
 
 At first, the gearman client needs to connect with a gearman server. One or more
 gearman server can be provided to the Gearman client. But at any time, the gearman
@@ -122,8 +126,8 @@ After the client is ready, start it like below:
 scala -classpath <classpath> yourWorker
 ```
 
-The source of this example can be found at example/org.gearman/example/reverse directory
+The source of this example can be found at example/src/main/scala/org/gearman/example/reverse directory
 
-##Another examples
+##Other examples
 
-The another examples can be found at  example/org.gearman/example directory
+The another examples can be found at  example/src/main/scala/org/gearman/example/ directory
