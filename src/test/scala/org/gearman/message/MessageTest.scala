@@ -48,7 +48,7 @@ class MessageTest extends FunSpec with ShouldMatchers {
 		}
 		
 		it( "AdminRequest codec") {
-			val msg = AdminRequest.parse( "command arg1 arg2 arg3")
+			val msg = AdminRequest( "command arg1 arg2 arg3")
 			
 			val adminReq = msg.asInstanceOf[AdminRequest]
 			
