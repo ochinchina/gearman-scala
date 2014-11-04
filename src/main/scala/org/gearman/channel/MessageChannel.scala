@@ -20,6 +20,7 @@
 package org.gearman.channel
 
 import org.gearman.message._
+import java.util.concurrent.{ExecutorService}
 
 /**
  * message handler to handle the gearman message got from the peer through 
@@ -100,4 +101,24 @@ trait MessageChannel {
 	 * @return the peer IP address	 	 
 	 */	 	
 	def getAddress: String
+}
+
+/**
+ * create a MessageChannel in asyn mode. After a channel is created, the {@code callback}
+ * should be called in the {@code executor} 
+ *
+ * @param executor the executor
+ * @param callback after the message channel is created, notify the user the channel
+ * is ready by calling {@code callback}    
+ */  
+trait MessageChannelFactory {
+	/**
+	 *  create a channel and notify user if the channel is created through {@code callback}.
+	 *  The {@code callback} should be executed in the {@code executor}
+	 *  
+	 * @param executor the executor that the {@code callback} will be called
+	 * @param callback notify user after the channel is created	 	 	 	 	 
+	 *
+	 */	 	 	
+	def create( executor: ExecutorService, callback: MessageChannel=> Unit )
 }
