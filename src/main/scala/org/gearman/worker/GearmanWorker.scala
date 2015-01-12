@@ -25,7 +25,7 @@ import org.gearman.util.Util._
 import scala.collection.mutable.{HashMap}
 import scala.util.control.Breaks._
 import java.net.InetSocketAddress
-import java.util.concurrent.{Executors}
+import java.util.concurrent.{Executors,LinkedBlockingQueue}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import ExecutionContext.Implicits.global
@@ -119,16 +119,47 @@ private trait JobHandler {
 	 */	 	
 	def handle( data: String, 
 				uid: Option[String],
-				responser: JobResponser )
+				responser: JobResponser,
+				dataFetcher: JobDataFetcher )
 }
 
+trait JobDataFetcher {
+    /**
+     *  fetch the data from the client side in sync mode.
+     *  
+     * @return the data from the client side	      
+     */	     
+    def data: String
+    
+    /**
+     *  fetch the data from the client side in async mode
+     *  
+     * @param callback the callback to receive the data from client side	      
+     */	     
+    def data( callback: (String, Option[String], JobResponser, JobDataFetcher)=>Unit )
+} 
+
+private class DefJobDataFetcher( uid: Option[String], responser: JobResponser ) extends JobDataFetcher {
+    private val datas = new LinkedBlockingQueue[String]
+        
+    def add( data: String ) {
+        datas.offer( data )
+	}
+    
+	def data: String = datas.take
+	
+	def data( callback: (String, Option[String], JobResponser, JobDataFetcher)=>Unit ) {
+		val dataFetcher = this
+	    future{ callback( datas.take, uid, responser, dataFetcher ) }
+	}
+}
 /**
  * this class manages all the on-going jobs fetched from the gearman server side
  * 
  * @author Steven Ou  
  */ 
 private class JobList {
-	private val jobs = new HashMap[ String, MessageChannel ]
+	private val jobs = new HashMap[ String, (MessageChannel, DefJobDataFetcher) ]
 	private val channelJobs = new HashMap[ MessageChannel, java.util.LinkedList[ String ] ]
 	
 	/**
@@ -137,8 +168,8 @@ private class JobList {
 	 * @param jobHandle the job handle
 	 * @param channel the message channel of gearman server	 	 	 
 	 */	 	
-	def addJob( jobHandle: String, channel: MessageChannel ) {
-		jobs += jobHandle -> channel
+	def addJob( jobHandle: String, channel: MessageChannel, dataFetcher: DefJobDataFetcher ) {
+		jobs += jobHandle -> ( channel, dataFetcher )
 		if( !channelJobs.contains( channel ) ) channelJobs += channel -> new java.util.LinkedList[ String ]
 		channelJobs( channel ).add( jobHandle )
 	}
@@ -149,11 +180,14 @@ private class JobList {
 	 * @param jobHandle the job handle	 	 
 	 */	 	
 	def removeJob( jobHandle: String ) {
-		val channel = jobs.get( jobHandle ) 
-		jobs -= jobHandle
-		if( channel.nonEmpty && channelJobs.contains( channel.get ) ) {
-			channelJobs( channel.get ).remove( jobHandle )
-			if( channelJobs( channel.get ).isEmpty ) channelJobs -= channel.get
+		jobs.get( jobHandle ) match {
+		    case Some( (channel, dataFetcher) )=>
+		        jobs -= jobHandle
+		        if( channelJobs.contains( channel ) ) {
+		            channelJobs( channel ).remove( jobHandle )
+		            if( channelJobs( channel ).isEmpty ) channelJobs -= channel
+				}
+		    case _=>
 		}
 	}
 	
@@ -171,7 +205,19 @@ private class JobList {
 	 */	 		
 	def size( channel: MessageChannel ) = {
 		if( channelJobs.contains( channel ) ) channelJobs( channel ).size else 0
-	} 
+	}
+	
+	/**
+	 *  get the job data fetcher by job handle
+	 */	 	
+	def getJobDataFetcher( jobHandle: String ):Option[DefJobDataFetcher] = {
+	    var dataFetcher:DefJobDataFetcher = null
+	    jobs( jobHandle ) match {
+	        case (channel, tmpDataFetcher ) => dataFetcher = tmpDataFetcher
+	        case _ =>
+		}
+		if( dataFetcher == null ) None else Some( dataFetcher )
+	}
 
 }
 
@@ -294,10 +340,10 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	 * function data, the second parameter is the optional job uid and the third
 	 * parameter is the job responser used to send data to the client	 	 	 	 	 	 	 
 	 */	 	 	
-	def canDo( funcName: String, timeout: Int = -1 )( funcHandle: (String, Option[String], JobResponser) => Unit ) {
+	def canDo( funcName: String, timeout: Int = -1 )( funcHandle: (String, Option[String], JobResponser, JobDataFetcher ) => Unit ) {
 		canDo( funcName, new JobHandler {
-			def handle( data: String, uid: Option[String], responser: JobResponser ) {
-				funcHandle( data, uid, responser )
+			def handle( data: String, uid: Option[String], responser: JobResponser, dataFetcher: JobDataFetcher ) {
+				funcHandle( data, uid, responser, dataFetcher )
 			}
 		}, timeout )
 	}
@@ -399,7 +445,8 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 				case JobAssign( jobHandle, funcName, data ) => handleJob( from, jobHandle, funcName, data, None )
 				case JobAssignUniq( jobHandle, funcName, uid, data ) => handleJob( from, jobHandle, funcName, data, Some( uid ) )
 				case Noop() => grabJob( from )
-				case NoJob() => from.send( PreSleep() )																		
+				case NoJob() => from.send( PreSleep() )
+				case WorkDataReq( jobHandle, data ) => handleJobData( from, jobHandle, data )																		
 				case _ => from.send( PreSleep() )
 			} 
 		}
@@ -412,13 +459,22 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 	
 	private def handleJob( from: MessageChannel, jobHandle: String, funcName: String, data: String, uid: Option[String] ) {
 		funcHandlers.get( funcName ) match {
-			case Some( (handler, timeout) ) => 
-				jobs.addJob( jobHandle, from )
-				future { handler.handle( data, uid, new DefJobResponser( jobHandle, from, handleJobCompleted( from, jobHandle ) ) ) }
+			case Some( (handler, timeout) ) =>
+				val responser = new DefJobResponser( jobHandle, from, handleJobCompleted( from, jobHandle ) )
+			    val dataFetcher = new DefJobDataFetcher( uid, responser ) 
+				jobs.addJob( jobHandle, from, dataFetcher )
+				future { handler.handle( data, uid, responser, dataFetcher ) }
 			case _ =>
 		}
 		
 		grabJob( from )
+	}
+	
+	private def handleJobData( from: MessageChannel, jobHandle: String, data: String ) {
+	    jobs.getJobDataFetcher( jobHandle ) match {
+	        case Some( dataFetcher ) => dataFetcher.add( data )
+	        case _ =>
+		}
 	}
 	
 	private def handleJobCompleted( channel: MessageChannel, jobHandle: String ) {

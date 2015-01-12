@@ -145,7 +145,7 @@ class GearmanClientTest extends Specification with Mockito {
 						data: String,
 						jobId: String, 
 						msgProcessor: (Message, MessageChannel)=>Unit, 
-						submitJob: (GearmanClient, Promise[String] )=>Future[String] ) = {
+						submitJob: (GearmanClient, Promise[String] )=>Future[(String, JobDataSender)] ) = {
 		val (channel1, channel2) = MemoryMessageChannel.createPair
 		val msgHandler = mock[MessageHandler]
 		val client = createClient( channel1 )
@@ -158,7 +158,7 @@ class GearmanClientTest extends Specification with Mockito {
 				
 		val f = submitJob( client, p )
 		
-		val hasJobHandle = Await.result( f, Duration.Inf ) == jobId
+		val hasJobHandle = Await.result( f, Duration.Inf )._1 == jobId
 		val ret = Await.result( p.future, Duration.Inf )
 		var isSuccess = if( timeoutMillis > 0 && sleepTime > 0 && sleepTime > timeoutMillis ) ret == "" else ret == data 
                                     	
@@ -246,7 +246,7 @@ class GearmanClientTest extends Specification with Mockito {
 				}
 		}
 		
-		var jobs = List.empty[ (String, String, Promise[String], Future[String]) ]
+		var jobs = List.empty[ (String, String, Promise[String], Future[(String,JobDataSender)]) ]
 		
         for( i <- 1 until 10 ) {
         	val jobData = s"This is a simple Echo $i"
@@ -261,7 +261,7 @@ class GearmanClientTest extends Specification with Mockito {
 		var isSuccess = true
 		
 		jobs.foreach { case ( jobData, jobId, p, f ) =>
-			if( Await.result( p.future, Duration.Inf ) != jobData || Await.result( f, Duration.Inf ) != jobId ) {
+			if( Await.result( p.future, Duration.Inf ) != jobData || Await.result( f, Duration.Inf )._1 != jobId ) {
 				isSuccess = false
 			} 
 		}

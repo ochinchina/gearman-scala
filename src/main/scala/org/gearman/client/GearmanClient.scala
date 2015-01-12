@@ -47,6 +47,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait JobEvent
 
 /**
+ * After created a job in the gearman, the client can send a lot of data to the
+ * worker by invoking the method    
+ */ 
+trait JobDataSender {
+    def data(data: String )
+}
+
+/**
  * Client will convert the WORK_DATA message to a JobData event
  * 
  * This event will dispatch to the callback of [[GearmanClient.submitJob]] method
@@ -151,7 +159,6 @@ private class DefMessageChannelFactory(servers: String ) extends MessageChannelF
 		}
 	}
 }  
-
 
 /**
  *  represents the client side in gearman protocol. When a user can submit a job
@@ -275,7 +282,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 
-	def submitJob( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit  ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Normal, timeout, Some( jobCallback ) )
+	def submitJob( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit  ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.Normal, timeout, Some( jobCallback ) )
 		
 	/**
 	 * submit a normal priority background job with {@code funcName}, {@code data}, 
@@ -287,7 +294,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * @param timeout > 0 the timeout in milliseconds, <= 0 no timeout
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJobBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Normal, timeout, None )
+	def submitJobBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.Normal, timeout, None )
 
     /**
 	 * submit a low priority job with {@code funcName}, {@code uid}, {@code data}, 
@@ -303,7 +310,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	
-	def submitJobLow( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Low, timeout, Some(jobCallback ) )
+	def submitJobLow( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.Low, timeout, Some(jobCallback ) )
 	
 	/**
 	 * submit a low priority background job with {@code funcName}, {@code data}, 
@@ -315,7 +322,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * @param timeout > 0 the timeout in milliseconds, <= 0 no timeout
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJobLowBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.Low, timeout, None)
+	def submitJobLowBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.Low, timeout, None)
 
     /**
 	 * submit a high priority job with {@code funcName}, {@code uid}, {@code data}, 
@@ -331,7 +338,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * 	 	 
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */
-	def submitJobHigh( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.High, timeout, Some(jobCallback ) )
+	def submitJobHigh( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 )( jobCallback: JobEvent=>Unit ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.High, timeout, Some(jobCallback ) )
 	
 	/**
 	 * submit a high priority background job with {@code funcName}, {@code data}, 
@@ -343,7 +350,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 	 * @param timeout > 0 the timeout in milliseconds, <= 0 no timeout
 	 * @return a Future[String] contains the returned job handler	 	 	 	 	  	 	 
 	 */	 	
-	def submitJobHighBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ String ] = submitJob( funcName, data, uid, JobPriority.High, timeout, None)
+	def submitJobHighBg( funcName: String, data: String, uid: String = UUID.randomUUID.toString, timeout: Long = -1 ): Future[ (String,JobDataSender) ] = submitJob( funcName, data, uid, JobPriority.High, timeout, None)
 	
 	/**
 	 *  get the job status
@@ -421,9 +428,9 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 				uid: String, 
 				priority:JobPriority, 
 				timeout: Long, 
-				callback: Option[JobEvent=>Unit] ): Future[String] = {
+				callback: Option[JobEvent=>Unit] ): Future[(String,JobDataSender)] = {
 				
-		val p = Promise[String]()
+		val p = Promise[(String,JobDataSender)]()
 		send( createSubmitJobMessage( funcName, data, uid, callback.isEmpty, priority ), 
 			timeout, 
 			new JobResponseChecker( callback, p ),
@@ -519,7 +526,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 		runningJobs.clear
 	}
 	
-	private class JobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ String ] ) extends ResponseChecker {
+	private class JobResponseChecker( callback: Option[JobEvent=>Unit], p: Promise[ (String, JobDataSender) ] ) extends ResponseChecker {
 		@volatile
 		var thisJobHandle: String = null
 				
@@ -550,9 +557,8 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 			
 		private def handleJobCreated( jobHandle: String ) = {
 			if( thisJobHandle == null ) {
-				println( s"handleJobCreated, jobHandle=$jobHandle")
 				thisJobHandle = jobHandle
-				p success jobHandle
+				p success ( (jobHandle, createJobDataSender(jobHandle) ) )
 				if( callback.isEmpty ) ResponseCheckResult( true, true ) else ResponseCheckResult( true, false )
 			} else ResponseCheckResult( false, false )
 
@@ -598,6 +604,20 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 				callback.get( JobException( data ) )
 				ResponseCheckResult( true, false )
 			} else ResponseCheckResult( false, false )
+		}
+		
+		private def createJobDataSender( jobHandle: String ):JobDataSender = new JobDataSender {
+		    def data( data: String ) {
+		        executor.submit( new Runnable{
+		           def run {
+				       try {
+					       clientChannel.send( WorkDataReq( jobHandle, data ) )
+                       }catch {
+                           case _=>
+					   }
+				   }
+				})
+			}
 		} 
 	}
 }

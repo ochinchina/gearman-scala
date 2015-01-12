@@ -10,7 +10,7 @@ object ReverseWorker {
 			//create a worker and connect to servers
 			val worker = GearmanWorker( args(0) )
 			//tell servers what work this worker can do 
-			worker.canDo( "reverse") { case( data, uid, responser ) =>
+			worker.canDo( "reverse") { case( data, uid, responser, _ ) =>
 				//reverse the received data and response
 				responser complete reverse( data )
 			}

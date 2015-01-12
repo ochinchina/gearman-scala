@@ -21,7 +21,7 @@ object FtpWorker {
 			//register the "ftp_get" function to the gearman server
 			worker.canDo ( "ftp_get") {
 				//if a job is fetched from the server 
-				case ( fileName, uid, responser ) =>
+				case ( fileName, uid, responser, _ ) =>
 					//open and send the file content to client through gearman
 					//server line by line
 					Source.fromFile( fileName ).getLines.foreach {

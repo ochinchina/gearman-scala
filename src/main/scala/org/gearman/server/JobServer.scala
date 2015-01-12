@@ -52,6 +52,17 @@ private case class Job( funcName: String,
 			var processing: MessageChannel = null,
 			var numerator: Int = 0,
 			var denominator: Int = 0  ) {
+	private var datas_ = List[String]()
+	def addData( data: String ) {
+	    data :+ datas_
+	}
+	
+	def sendDatas( channel: MessageChannel ) {
+	    while( !datas_.isEmpty ) {
+	        channel.send( WorkDataReq( jobHandle, datas_.head ) )
+	        datas_ = datas_.tail
+		} 
+	}
 }
 
 /**
@@ -668,6 +679,8 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 						if( uniq )
 							from.send( JobAssignUniq( job.jobHandle, job.funcName, job.uniqId, job.data ) )
 						else from.send( JobAssign( job.jobHandle, job.funcName, job.data ) )
+						
+						job.sendDatas( from )
 						val timeout = workers.getTimeout( job.funcName, from )
 						if( timeout > 0 ) timer.schedule( new TimerTask { def run { handleTimeout( from, job.jobHandle ) } }, timeout * 1000 )
 					case _ =>  from.send( NoJob() )
@@ -688,6 +701,13 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 		jobs.getProcessingJob( from, jobHandle ) match {
 			case Some( job ) => if( !job.background ) job.from.send( WorkDataRes( jobHandle, data ) )
 			case _ =>
+			    jobs.getJob( from, jobHandle ) match {
+			        case Some(job) => 
+					    if( job.processing != null )
+						    job.processing.send( WorkDataReq( jobHandle, data ) )
+						else job.addData( data )
+			        case _ =>
+				}
 		}
 	}
 	
