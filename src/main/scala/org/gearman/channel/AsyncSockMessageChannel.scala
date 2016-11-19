@@ -34,7 +34,6 @@ import org.gearman.message._
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.{Logger}
 import org.slf4j.LoggerFactory
 
 /**
@@ -124,7 +123,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 	private var msgHandler: MessageHandler = null
 	private var connected = true;
 	private val channel = new AsynchronousSocketChannelWrapper( sockChannel )
-	private val logger = Logger(LoggerFactory.getLogger(AsyncSockMessageChannel.getClass))
+	private val logger = LoggerFactory.getLogger(AsyncSockMessageChannel.getClass)
 	
 	logger.debug( "connect to " + sockChannel.getRemoteAddress)
 	
@@ -141,6 +140,7 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 	}
 	
 	def send( msg:Message, callback: Option[ Boolean => Unit ] = None ) {
+	  println( "send:" + msg )
 		val bos = new ByteArrayOutputStream
 		val dos = new DataOutputStream( bos )
 		msg.writeTo( dos )

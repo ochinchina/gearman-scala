@@ -19,8 +19,8 @@
 
 package org.gearman.channel
 
-import org.gearman.message._
-import java.util.concurrent.{ExecutorService}
+import org.gearman.message.Message
+import java.util.concurrent.ExecutorService
 
 /**
  * message handler to handle the gearman message got from the peer through 

@@ -18,36 +18,34 @@
 */
 package org.gearman.message
 
-import org.scalatest.FunSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest._
 import java.io.{ByteArrayOutputStream,
 			ByteArrayInputStream,
 			DataOutputStream,
 			DataInputStream}
 
-class MessageTest extends FunSpec with ShouldMatchers {
-	describe("Message") {
-		it ( "echo request codec") {
+class MessageTest extends FlatSpec  with Matchers {
+		it should "echo request codec" in {
 			val msg = codecMessage( new EchoReq( "hello") )
 			msg.asInstanceOf[ EchoReq ].data should be ("hello")
 		}
 		
-		it ( "echo response codec") {
+		it should "echo response codec" in {
 			val msg = codecMessage( new EchoRes( "hello") )
 			msg.asInstanceOf[ EchoRes ].data should be ("hello")
 		}
 		
-		it ( "CanDo request codec") {
+		it should "CanDo request codec" in {
 			val msg = codecMessage( new CanDo( "func") )
 			msg.asInstanceOf[ CanDo ].funcName should be ("func")
 		}
 		
-		it ( "CantDo request codec") {
+		it should "CantDo request codec" in {
 			val msg = codecMessage( new CantDo( "func") )
 			msg.asInstanceOf[ CantDo ].funcName should be ("func")
 		}
 		
-		it( "AdminRequest codec") {
+		it should "AdminRequest codec" in {
 			val msg = AdminRequest( "command arg1 arg2 arg3")
 			
 			val adminReq = msg.asInstanceOf[AdminRequest]
@@ -60,7 +58,6 @@ class MessageTest extends FunSpec with ShouldMatchers {
 			adminReq.args(1) should be ("arg2")
 			adminReq.args(2) should be ("arg3")
 		}
-	}
 	
 	private def codecMessage( msg: Message ): Message = {
 			val arrayOut = new ByteArrayOutputStream 

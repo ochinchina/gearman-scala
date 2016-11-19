@@ -1,0 +1,26 @@
+apply plugin: 'scala'
+
+repositories {
+    mavenCentral()
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gearman in scala',  
+        	'Implementation-Version': '1.1',
+        	'Main-Class': 'org.gearman.server.GearmanServer'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.11.8'
+    compile 'com.typesafe.akka:akka-actor_2.11:2.4.11'
+    compile 'io.netty:netty-all:4.1.6.Final'
+    compile 'org.slf4j:slf4j-api:1.7.21'
+compile group: 'org.scalatest', name: 'scalatest_2.11', version: '3.0.0'
+compile group: 'org.specs2', name: 'specs2_2.11', version: '3.7'
+ 
+}

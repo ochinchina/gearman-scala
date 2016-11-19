@@ -27,33 +27,6 @@ import java.io.{InputStream,
 			IOException}
 
 /**
- * Job priority, three priority is defined:
- * {{{
- * Normal: the normal job priority
- * Low: the Low priority
- * High: the high priority    
- * }}}
- * 
- * The higher priority job will be scheduled by gearman server prior to the lower 
- * priority job   
- */ 
-object JobPriority extends Enumeration {
-	type JobPriority = Value
-	/**
-	 * Low priority
-	 */	 
-	val Low = Value 
-	/**
-	 * Normal priority
-	 */	 
-	val Normal = Value
-	/**
-	 * High priority
-	 */	 
-	val High = Value
-}
-
-/**
  * represents a message concept in the Gearman protocol, include the administrative
  * message and the gearman binary message. 
  */ 
@@ -142,8 +115,8 @@ abstract class BinMessage extends Message {
 
 
 object Message {	
-	val ReqMagicCode: Int = new DataInputStream( new ByteArrayInputStream("\0REQ".getBytes("UTF-8") ) ).readInt
-	val ResMagicCode: Int = new DataInputStream( new ByteArrayInputStream("\0RES".getBytes("UTF-8") ) ).readInt
+	val ReqMagicCode: Int = ('R' << 16) | ('E' << 8) | 'Q'
+	val ResMagicCode: Int = ('R' << 16) | ('E' << 8) | 'S'
 	val CAN_DO = 1
 	val CANT_DO = 2
 	val RESET_ABILITIES = 3
@@ -179,6 +152,12 @@ object Message {
 	val SUBMIT_JOB_LOW_BG = 34
 	val SUBMIT_JOB_SCHED = 35
 	val SUBMIT_JOB_EPOCH = 36
+	val SUBMIT_REDUCE_JOB = 37
+	val SUBMIT_REDUCE_JOB_BACKGROUND = 38
+	val GRAB_JOB_ALL = 39
+	val JOB_ASSIGN_ALL = 40
+	val GET_STATUS_UNIQUE = 41
+	val STATUS_RES_UNIQUE = 42
 	
 	
 	
@@ -674,6 +653,13 @@ case class GetStatus( jobHandle: String ) extends BinRequest {
 	}
 }
 
+case class GetStatusUnique( unique: String ) extends BinRequest {
+  protected [this] override def getType = Message.GET_STATUS_UNIQUE
+	override protected def writeBody( out: DataOutputStream ) {
+		out.write( unique.getBytes( "UTF-8") )
+	}
+}
+
 /**
  * A client can ping a server by sending a ECHO request to server to check if 
  * the server works ok.
@@ -769,6 +755,23 @@ case class StatusRes( jobHandle: String, knownStatus: Boolean, runningStatus: Bo
 		out.write( percentCompleteNumerator.toString.getBytes("UTF-8") )
 		out.write( 0 )
 		out.write( percentCompleteDenominator.toString.getBytes("UTF-8") )
+	}
+}
+
+case class StatusResUnique( jobHandle: String, knownStatus: Boolean, runningStatus: Boolean, percentCompleteNumerator: Int, percentCompleteDenominator:Int, clientsWaiting: Int ) extends BinResponse {
+	protected [this] override def getType = Message.STATUS_RES_UNIQUE
+	override protected def writeBody( out: DataOutputStream ) {
+		out.write( jobHandle.getBytes( "UTF-8") )
+		out.write( 0 )
+		if( knownStatus ) out.write( "1".getBytes("UTF-8") ) else out.write( "0".getBytes("UTF-8") )
+		out.write( 0 )
+		if( runningStatus ) out.write( "1".getBytes("UTF-8") ) else out.write( "0".getBytes("UTF-8") )
+		out.write( 0 )
+		out.write( percentCompleteNumerator.toString.getBytes("UTF-8") )
+		out.write( 0 )
+		out.write( percentCompleteDenominator.toString.getBytes("UTF-8") )
+		out.write( 0 )
+		out.write( clientsWaiting.toString.getBytes("UTF-8") )
 	}
 }
 
@@ -997,6 +1000,12 @@ case class GrabJobUniq() extends BinRequest {
 	}
 }
 
+case class GrabJobAll() extends BinRequest {
+	protected [this] override def getType = Message.GRAB_JOB_ALL
+	override protected def writeBody( out: DataOutputStream ) {
+	}
+}
+
 /**
  * After getting GRAB_JOB_UNIQ request, if a job is available, the server will
  * send JOB_ASSIGN_UNIQ response to worker.
@@ -1123,7 +1132,46 @@ case class SubmitJobEpoch(funcName: String, uniqueId: String, epoch: Long, data:
 }
 
 
+case class SubmitReduceJob(funcName: String, uniqueId: String, reducer: String, data: String ) extends BinRequest {
+	protected [this] override def getType = Message.SUBMIT_REDUCE_JOB
+	override protected def writeBody( out: DataOutputStream ) {
+		out write funcName.getBytes( "UTF-8")
+		out write 0
+		out write uniqueId.getBytes( "UTF-8")
+		out write 0
+		out write reducer.getBytes( "UTF-8")
+		out write 0
+		out write data.getBytes( "UTF-8")
+	}
+}
 
+case class SubmitReduceJobBg(funcName: String, uniqueId: String, reducer: String, data: String ) extends BinRequest {
+	protected [this] override def getType = Message.SUBMIT_REDUCE_JOB_BACKGROUND
+	override protected def writeBody( out: DataOutputStream ) {
+		out write funcName.getBytes( "UTF-8")
+		out write 0
+		out write uniqueId.getBytes( "UTF-8")
+		out write 0
+		out write reducer.getBytes( "UTF-8")
+		out write 0
+		out write data.getBytes( "UTF-8")
+	}
+}
+
+case class JobAssignAll(handle: String, funcName: String, uniqueId: String, reducer: String, data: String ) extends BinRequest {
+	protected [this] override def getType = Message.JOB_ASSIGN_ALL
+	override protected def writeBody( out: DataOutputStream ) {
+	  out write handle.getBytes("UTF-8" )
+	  out write 0
+		out write funcName.getBytes( "UTF-8")
+		out write 0
+		out write uniqueId.getBytes( "UTF-8")
+		out write 0
+		out write reducer.getBytes( "UTF-8")
+		out write 0
+		out write data.getBytes( "UTF-8")
+	}
+}
 
 
 
