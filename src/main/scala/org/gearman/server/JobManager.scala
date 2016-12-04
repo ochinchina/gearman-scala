@@ -42,9 +42,9 @@ class JobManager extends Actor {
 		case (client:MessageChannel, CantDo(funcName)) => workers.removeFunc(client, funcName)
 		case (client:MessageChannel, CanDoTimeout(funcName, timeout ) ) => workers.addFunc( client, funcName, timeout )
 		case (client:MessageChannel, ResetAbilities() ) => workers.remove( client )
-		case (client:MessageChannel, GrabJob) => handleGrabJob(client, false, false )
-		case (client:MessageChannel, GrabJobUniq ) => handleGrabJob( client, true, false )
-		case (client:MessageChannel, GrabJobAll ) => handleGrabJob( client, true, true)
+		case (client:MessageChannel, GrabJob() ) => handleGrabJob(client, false, false )
+		case (client:MessageChannel, GrabJobUniq() ) => handleGrabJob( client, true, false )
+		case (client:MessageChannel, GrabJobAll() ) => handleGrabJob( client, true, true)
 		case (client:MessageChannel, PreSleep() ) => workers.sleep( client )
 		case (client:MessageChannel, GetStatus( jobHandle ) ) => handleGetStatus( client, jobHandle )
 		case (client:MessageChannel, GetStatusUnique( uniqId ) ) => handleGetStatusUnique( client, uniqId )
@@ -52,28 +52,37 @@ class JobManager extends Actor {
 		case (client:MessageChannel, WorkWarningReq( jobHandle, data ) ) => sendWorkData( client, jobHandle, new WorkWarningRes( jobHandle, data ) )
 		case (client:MessageChannel, WorkFailReq( jobHandle ) ) => sendWorkData( client, jobHandle, new WorkFailRes( jobHandle ), true )
 		case (client:MessageChannel, WorkExceptionReq( jobHandle,data ) ) => sendWorkData( client, jobHandle, new WorkExceptionRes( jobHandle,data ), true )
-		case (client:MessageChannel, WorkCompleteReq( jobHandle,data ) ) => sendWorkData( client, jobHandle, new WorkCompleteRes( jobHandle,data ), true )
+		case (client:MessageChannel, WorkCompleteReq( jobHandle,data ) ) => 
+		  sendWorkData( client, jobHandle, new WorkCompleteRes( jobHandle,data ), true )
 		case (client:MessageChannel, SetClientId( clientId ) ) => workers.setId( client, clientId )
 		case (client:MessageChannel, AdminRequest( command, args ) ) =>
-		case ("timeout", job:Job) => if( jobs.remove( job ) ) job.from.send( WorkFailRes( job.jobHandle) )
+		case ("timeout", job:Job) => 
+		  if( jobs.remove( job ) ) job.from.send( WorkFailRes( job.jobHandle) )
 		case (client:MessageChannel, "connectionLost" ) => handleConnectionLost( client )
 		case _ =>
 	}
 
-  def handleJob( job: Job ) {
-    jobs.add( job )
-    workers.wakeup( job.funcName ).foreach{ client => client.send( Noop() ) }
+  private def handleJob( job: Job ) {
+    println( "handleJob:" + job )
+    if( jobs.add( job ) ) {
+      job.from.send( JobCreated( job.jobHandle ) )
+      workers.wakeup( job.funcName ).foreach{ client => client.send( Noop() ) }
+    } else {
+      job.from.close
+    }
   }
   
-  def handleConnectionLost( client: MessageChannel ) = {
+  private def handleConnectionLost( client: MessageChannel ) = {
     var clientJobs = List[Job]()
     
+    //remove all the not background job  from client
     jobs.foreach{ job => if(job.from == client && !job.background ) clientJobs = (job +: clientJobs) }
     
     clientJobs.foreach{ job => jobs.remove( job ) }
   }
 
-  def handleGrabJob( client: MessageChannel, uniq: Boolean, reduce: Boolean ) = {
+  private def handleGrabJob( client: MessageChannel, uniq: Boolean, reduce: Boolean ) = {
+	println( "handleGrabJob,client=" + client )
     workers.getFuncs(client) match {
       case funcs: List[WorkerFuncInfo] =>
         jobs.find( jb => jb.processing == null && funcs.find( _.funcName == jb.funcName ) != None ) match {
@@ -86,17 +95,18 @@ class JobManager extends Actor {
               client.send ( JobAssign (job.jobHandle, job.funcName, job.data) )
             }
             job.processing = client
-            if( !job.background ) context.system.scheduler.schedule( 0 seconds, funcs.find( _.funcName == job.funcName ).get.timeout seconds, self, ("timeout", job ) )
+            val timeout = funcs.find( _.funcName == job.funcName ).get.timeout
+            if( !job.background && timeout > 0 ) context.system.scheduler.scheduleOnce( timeout seconds, self, ("timeout", job ) )
 	          
           case _ => client.send( NoJob() )
         }
-      case _ =>
+      case _ => client.send( NoJob() )   
     }
   }
 
   
   
-  def handleGetStatus( client: MessageChannel, jobHandle: String ) = {
+  private def handleGetStatus( client: MessageChannel, jobHandle: String ) = {
   	jobs.find( _.jobHandle == jobHandle ) match {
   		case Some( job ) =>
   			client.send( StatusRes( jobHandle, job.numerator != 0 && job.denominator != 0, job.processing != null, job.numerator, job.denominator ) )
@@ -105,7 +115,7 @@ class JobManager extends Actor {
 	}
   }    
   
-  def handleGetStatusUnique( client: MessageChannel, uniqId: String ) = {
+  private def handleGetStatusUnique( client: MessageChannel, uniqId: String ) = {
     
     val waitingClients = Set[MessageChannel]()
     jobs.foreach{ waitingClients += _.from }
@@ -118,20 +128,22 @@ class JobManager extends Actor {
 	}
   }  
   
-  def sendWorkData( client: MessageChannel, 
+  private def sendWorkData( client: MessageChannel, 
   		jobHandle: String,
-		msg: Message,
-		complete: Boolean = false ) { 		
-  	jobs.find( _.jobHandle == jobHandle ) match {
-  		case Some( job ) =>
-  			if( !job.background ) {
-  				job.from.send( msg )
-			}
-			if( complete ) {
-				jobs.remove(  job )
-			}
-  		case _ =>
-	}
+  		msg: Message,
+  		complete: Boolean = false ) { 		
+  		  jobs.find( _.jobHandle == jobHandle ) match {
+  		      case Some( job ) =>
+  		      if( client == job.processing ) {
+  		        if( !job.background ) {
+  		          job.from.send( msg )
+  		        }
+  		        if( complete ) {
+  		          jobs.remove(  job )
+  		        }
+  		      }
+  		      case _ =>
+  		  }
   }
 
     

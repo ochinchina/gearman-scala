@@ -18,13 +18,17 @@
 */
 
 package org.gearman.server
+import akka.actor.{ActorSystem, Props}
 
 object GearmanServer {
 	def main( args: Array[String] ) {
+	  val actorSystem = ActorSystem("Gearman")
+	  val jobManager = actorSystem.actorOf( Props[JobManager] )
+	
 		args.length match {
 			case 0 => printUsage; System.exit( 0 )
-			case 1 => JobServer( args(0).toInt )
-			case _ => JobServer( args(0), args(1).toInt )
+			case 1 => JobServer( args(0).toInt, jobManager )
+			case _ => JobServer( args(0), args(1).toInt, jobManager )
 		}
 		while( true ) {
 			Thread.sleep( 1000 )

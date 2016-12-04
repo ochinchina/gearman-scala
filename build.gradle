@@ -1,8 +1,25 @@
-apply plugin: 'scala'
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "gradle.plugin.org.scoverage:gradle-scoverage:2.1.0"
+  }
+}
+
+plugins {
+  id "org.scoverage" version "2.1.0"
+}
 
 repositories {
     mavenCentral()
 }
+
+apply plugin: 'scala'
+apply plugin: "org.scoverage"
+
 
 task fatJar(type: Jar) {
     manifest {
@@ -17,10 +34,12 @@ task fatJar(type: Jar) {
 
 dependencies {
     compile 'org.scala-lang:scala-library:2.11.8'
-    compile 'com.typesafe.akka:akka-actor_2.11:2.4.11'
+    //compile 'com.typesafe.akka:akka-actor_2.11:2.4.11'
+    compile 'com.typesafe.akka:akka-slf4j_2.11:2.4.12'
     compile 'io.netty:netty-all:4.1.6.Final'
     compile 'org.slf4j:slf4j-api:1.7.21'
 compile group: 'org.scalatest', name: 'scalatest_2.11', version: '3.0.0'
 compile group: 'org.specs2', name: 'specs2_2.11', version: '3.7'
+scoverage 'org.scoverage:scalac-scoverage-plugin_2.11:1.1.0', 'org.scoverage:scalac-scoverage-runtime_2.11:1.1.0'
  
 }

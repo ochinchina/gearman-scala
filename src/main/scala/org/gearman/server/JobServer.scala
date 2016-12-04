@@ -20,7 +20,7 @@ package org.gearman.server
 
 import org.gearman.message._
 import org.gearman.channel._
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import scala.collection.mutable.{HashMap,LinkedList,HashSet,PriorityQueue}
 import java.util.{UUID, Timer, TimerTask}
 import scala.util.control.Breaks.{breakable,break}
@@ -36,9 +36,7 @@ import java.net.{SocketAddress, InetSocketAddress}
  *    
  * @author Steven Ou   
  */ 
-class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
-	private val actorSystem = ActorSystem("Gearman")
-	private val jobManager = actorSystem.actorOf( Props[JobManager] )
+class JobServer( sockAddr: SocketAddress, jobManager: ActorRef ) extends MessageHandler {
 	private val executor = Executors.newFixedThreadPool( 1 )	
 	@volatile
 	private var stopped = false
@@ -56,8 +54,6 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 	 */	 	
 	override def handleMessage( msg: Message, from: MessageChannel ) {
 		import Message._
-		
-		println( "handleMessage:" + msg )
 		
 		msg match {
 			case EchoReq(data) => from.send( EchoRes(data ) )
@@ -87,74 +83,20 @@ class JobServer( sockAddr: SocketAddress ) extends MessageHandler {
 			case preSleep: PreSleep => jobManager !( from, preSleep )
 			case setClientId: SetClientId => jobManager ! (from, setClientId)//workers.setId( from, id )
 			case adminRequest: AdminRequest => jobManager ! (from, adminRequest)//handleAdminRequest( from, command, args )
-			case _ =>     
+			case _ =>//ignore the message if it is unknown
 		}
 	}
 	
 	def handleDisconnect( from: MessageChannel ) = {
 	  jobManager ! (from, "connectionLost" )
 	}
-/*	
-	private def handleAdminRequest( from: MessageChannel, command: String, args: List[ String ] ) {
-		var respLines = List[String]()					
-		command match {
-			case "workers" =>
-				
-				workers.getWorkers.foreach( worker => {
-					val sb = new StringBuilder
-					sb.append( "-1 ").append( worker.getAddress ).append( ' ')
-					sb.append( workers.getId( worker ).getOrElse( "-") )
-					sb.append( ":")
-					workers.getWorkerFuncs( worker ).getOrElse( scala.collection.Set[String]() ).foreach( funcName=> {
-						sb.append( ' ' ).append( funcName )
-					})
-					
-					respLines = respLines :+ sb.toString				
-				})
-				
-				respLines = respLines :+ "."
-			
-			case "maxqueue" =>
-				args.size match {
-					case 0 =>
-					case 1 => jobs.setQueueSize( args(0), -1 )
-					case _ => jobs.setQueueSize( args(0), args(1).toInt )
-				}
-				respLines = respLines :+ "OK"	
-			case "status" =>
-				var funcs = Set[ String ]()
-				val allJobs = jobs.getAllJobs
-				
-				allJobs.foreach { job => funcs = funcs + job.funcName }
-				
-				funcs = funcs ++ workers.getAllFunctions
-				
-				funcs.foreach { funcName =>
-					val sb = new StringBuilder
-					sb.append( funcName ).append( '\t')
-					val funcJobs = allJobs.filter( job => job.funcName == funcName )
-					val funcRunningJobs = funcJobs.filter( job => job.processing != null )
-					sb.append( funcJobs.size ).append( '\t')
-					sb.append( funcRunningJobs.size ).append( '\t')
-					sb.append( workers.getFuncWorkers( funcName ).getOrElse( new HashMap[MessageChannel, Int] ).size )
-					respLines = respLines :+ sb.toString					
-				}
-				respLines = respLines :+ "."				
-			case "shutdown" =>
-				val graceful = args.size > 0 && args(0) == "graceful"
-				shutdown( graceful, System.exit( 0 ) ) 
-			case "version" => respLines = respLines :+ "1.0"
-			case _ =>                                       
-		}
-		
-		if( respLines.size > 0 ) from.send( AdminResponse( respLines ) )
-	} */
+
 }
 
 object JobServer {
-	def apply( sockAddr: SocketAddress) = new JobServer( sockAddr )
+	def apply( sockAddr: SocketAddress, jobMgr: ActorRef ) = new JobServer( sockAddr, jobMgr )
 	
-	def apply( listeningAddr: String, port: Int ) = new JobServer( new InetSocketAddress( listeningAddr, port ) )
+	def apply( listeningAddr: String, port: Int, jobMgr: ActorRef ) = new JobServer( new InetSocketAddress( listeningAddr, port ), jobMgr )
 	
-	def apply( port: Int ) = new JobServer( new InetSocketAddress( port ) )		
+	def apply( port: Int, jobMgr: ActorRef ) = new JobServer( new InetSocketAddress( port ), jobMgr )		
 }
