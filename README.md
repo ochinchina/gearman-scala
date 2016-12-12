@@ -28,7 +28,8 @@ Before using gearman, we need to compile it
 * run "sbt test:compile" to compile the gearman
 ```shell
 	$ cd gearman-scala
-	$ sbt test::compile
+	$ gradle fatJar
+	$ java -jar build/libs/gearman-scala-all.jar 4730
 ```
 
 #A Simple Example
