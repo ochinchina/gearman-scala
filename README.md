@@ -18,18 +18,17 @@ For the detailed technical information, please visit http://gearman.org/
 
 Before using gearman, we need to compile it
 
-* download the sbt tool from sbt website http://www.scala-sbt.org/
+* download the gradle tool from gradle website https://gradle.org/gradle-download/
 * clone the gearman-scala repository
 
 ```shell
 	$ git clone https://github.com/ochinchina/gearman-scala.git
 ```
 
-* run "sbt test:compile" to compile the gearman
+* run "gradle fatJar" to compile the gearman & pack everything into one .jar file
 ```shell
 	$ cd gearman-scala
-	$ gradle fatJar
-	$ java -jar build/libs/gearman-scala-all.jar 4730
+	$ gradle fatJar	
 ```
 
 #A Simple Example
@@ -41,7 +40,7 @@ We write a simple "reverse" to demo how to write worker and client in Scala lang
 A gearman start script is available in the bin directory, execute following command to start the gearman server:
 
 ```shell
-bin/run_gearman_server.sh
+$ java -jar build/libs/gearman-scala-all.jar 4730
 ```
 
 ##write & start gearman worker
@@ -80,11 +79,6 @@ worker.cantDo( "reverse")
 worker.shutdown( true )
 ```
 
-After the worker is ready, start it like below:
-
-```shell
-sbt "run-main yourWorker param1 param2..."
-```
 
 ##write & start client
 
