@@ -40,7 +40,7 @@ We write a simple "reverse" to demo how to write worker and client in Scala lang
 A gearman start script is available in the bin directory, execute following command to start the gearman server:
 
 ```shell
-$ java -jar build/libs/gearman-scala-all.jar 4730
+$ java -jar build/libs/gearman-scala-all-1.1.jar localhost 4730
 ```
 
 ##write & start gearman worker
@@ -118,7 +118,8 @@ client shutdown true
 After the client is ready, start it like below:
 
 ```shell
-sbt "run-main yourClient param1 param2..."
+$ gradle fatJar
+$ java -cp build/libs/example-all.jar org.gearman.example.reverse.ReverseClient 127.0.0.1:4730 test1 test2
 ```
 The source of this example can be found at example/src/main/scala/org/gearman/example/reverse directory
 
@@ -206,23 +207,29 @@ The complete chat example can be found at example/src/main/scala/org/gearman/exa
 The another examples can be found at  example/src/main/scala/org/gearman/example/ directory
 
 ##run the examples
- You try to run the example after installing the sbt and clone the git respository. There are some scripts under example/bin directory to start these examples.
- At first you should start the gearman server:
+ You try to run the example after installing the gradle and clone the git respository. There are some scripts under example/bin directory to start these examples.
+ 
+ At first you should compile the example:
+ ```shell
+ $ cd example
+ $ gradle fatJar
+ ```
+ Then start the gearman server:
  
  ```shell
- bin/run_gearman_server.sh
+ $ bin/run_gearman_server.sh
  ```
  
  Then start the worker, for example to start the reverse worker, you can:
  
  ```shell
- example/bin/run_reverse_client.sh
+ $ bin/run_reverse_worker.sh
  ```
  
  Finally start the client, for example to start the reverse client, you start it by calling:
  
  ```shell
- example/bin/run_reverse_worker.sh
+ $ bin/run_reverse_client.sh
  ```
 
 #License
