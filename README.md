@@ -7,13 +7,13 @@ This is a gearman implementation in scala language. It includes:
 * gearman client library, used to write application who submit work to the gearman server
 * gearman worker library, used to get jobs from the server and process it.
 
-#What's gearman
+# What's gearman
 
 
 Please visit gearman wiki http://en.wikipedia.org/wiki/Gearman to get gearman introduction.
 For the detailed technical information, please visit http://gearman.org/ 
 
-#Compile gearman
+# Compile gearman
 
 
 Before using gearman, we need to compile it
@@ -31,11 +31,11 @@ Before using gearman, we need to compile it
 	$ gradle fatJar	
 ```
 
-#A Simple Example
+# A Simple Example
 
 We write a simple "reverse" to demo how to write worker and client in Scala language
 
-##start gearman server
+## start gearman server
 
 A gearman start script is available in the bin directory, execute following command to start the gearman server:
 
@@ -43,7 +43,7 @@ A gearman start script is available in the bin directory, execute following comm
 $ java -jar build/libs/gearman-scala-all-1.1.jar localhost 4730
 ```
 
-##write & start gearman worker
+## write & start gearman worker
 
 First the worker need to connect to the gearman server. One worker can connect one
 or more gearman server.
@@ -80,7 +80,7 @@ worker.shutdown( true )
 ```
 
 
-##write & start client
+## write & start client
 
 At first, the gearman client needs to connect with a gearman server. One or more
 gearman server can be provided to the Gearman client. But at any time, the gearman
@@ -123,7 +123,7 @@ $ java -cp build/libs/example-all.jar org.gearman.example.reverse.ReverseClient 
 ```
 The source of this example can be found at example/src/main/scala/org/gearman/example/reverse directory
 
-##extend gearman protocol
+## extend gearman protocol
 
 In the current gearman protocol, after submitting a job to the gearman server, the client can't send any data to the job any more. 
 
@@ -202,11 +202,11 @@ Gearman worker in async mode:
 ```
 The complete chat example can be found at example/src/main/scala/org/gearman/example/chat directory
 
-##Other examples
+## Other examples
 
 The another examples can be found at  example/src/main/scala/org/gearman/example/ directory
 
-##run the examples
+## run the examples
  You try to run the example after installing the gradle and clone the git respository. There are some scripts under example/bin directory to start these examples.
  
  At first you should compile the example:
@@ -232,10 +232,10 @@ The another examples can be found at  example/src/main/scala/org/gearman/example
  $ bin/run_reverse_client.sh
  ```
 
-#License
+# License
 
 Apache License 2
 
-#API document
+# API document
 
 http://ochinchina.github.io/gearman-scala-api/
