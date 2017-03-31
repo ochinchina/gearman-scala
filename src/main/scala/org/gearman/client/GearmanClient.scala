@@ -154,8 +154,7 @@ private class DefMessageChannelFactory(servers: String ) extends MessageChannelF
 			start( 0, executor, callback )
 		} else {
 			AsyncSockMessageChannel.asyncConnect( serverAddrs( index ), 
-							{ channel: MessageChannel=> if( channel != null ) callback( channel ) else start( index + 1, executor, callback ) }, 
-							Some( executor ) )			
+							{ channel: MessageChannel=> if( channel != null ) callback( channel ) else start( index + 1, executor, callback ) } )
 		}
 	}
 }  
@@ -613,7 +612,7 @@ class GearmanClient( channelFactory: MessageChannelFactory, maxOnGoingJobs: Int 
 				       try {
 					       clientChannel.send( WorkDataReq( jobHandle, data ) )
                        }catch {
-                           case _=>
+                           case ex:Throwable=>
 					   }
 				   }
 				})

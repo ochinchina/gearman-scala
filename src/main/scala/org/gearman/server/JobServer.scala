@@ -44,7 +44,7 @@ class JobServer( sockAddr: SocketAddress, jobManager: ActorRef ) extends Message
 	private val serverSockChannel = AsyncSockMessageChannel.accept( sockAddr, (channel:MessageChannel) => {
 				channel.setMessageHandler( this )
 				channel.open
-			}, Some( executor ) )
+			} )
 		
 	/**
 	 *  handle the message received from the client or worker

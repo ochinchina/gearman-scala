@@ -150,7 +150,7 @@ private class DefJobDataFetcher( uid: Option[String], responser: JobResponser ) 
 	
 	def data( callback: (String, Option[String], JobResponser, JobDataFetcher)=>Unit ) {
 		val dataFetcher = this
-	    future{ callback( datas.take, uid, responser, dataFetcher ) }
+	    Future{ callback( datas.take, uid, responser, dataFetcher ) }
 	}
 }
 /**
@@ -436,7 +436,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 					}
 				} )
 			}
-		}, Some( executor ) )
+		} )
 	}
 	
 	private def createMessageHandler( addr: InetSocketAddress ) = new MessageHandler {
@@ -463,7 +463,7 @@ class GearmanWorker( servers: String, var maxOnGoingJobs: Int = 10 ) {
 				val responser = new DefJobResponser( jobHandle, from, handleJobCompleted( from, jobHandle ) )
 			    val dataFetcher = new DefJobDataFetcher( uid, responser ) 
 				jobs.addJob( jobHandle, from, dataFetcher )
-				future { handler.handle( data, uid, responser, dataFetcher ) }
+				Future{ handler.handle( data, uid, responser, dataFetcher ) }
 			case _ =>
 		}
 		

@@ -20,6 +20,8 @@ repositories {
 apply plugin: 'scala'
 apply plugin: "org.scoverage"
 
+version = 1.1
+
 
 task fatJar(type: Jar) {
     manifest {

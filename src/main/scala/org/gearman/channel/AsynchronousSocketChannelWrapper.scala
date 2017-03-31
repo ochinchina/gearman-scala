@@ -34,7 +34,7 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 			try { 
 				handler.completed( result, attachment )
 			}catch {
-				case _:Throwable =>
+				case ex:Throwable => handler.failed( ex, attachment )
 			}
 			execNextOperation( ops )
 		}
@@ -43,11 +43,11 @@ class AsynchronousSocketChannelWrapper( channel: AsynchronousSocketChannel ) {
 			try {
 				handler.failed( ex, attachment )
 			}catch {
-				case _: Throwable =>
+				case ex: Throwable => handler.failed( ex, attachment )
 			}
 			execNextOperation( ops )
 		}
-		
+	
 	}
 	
 	private class FirstReadOperation[A]( dsts: Array[ByteBuffer],

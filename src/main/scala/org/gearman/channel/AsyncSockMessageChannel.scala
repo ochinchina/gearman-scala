@@ -35,6 +35,8 @@ import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
+import java.util.Timer
+import java.util.TimerTask
 
 /**
  * manage the gearman message buffer
@@ -140,7 +142,6 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 	}
 	
 	def send( msg:Message, callback: Option[ Boolean => Unit ] = None ) {
-	  println( "send:" + msg )
 		val bos = new ByteArrayOutputStream
 		val dos = new DataOutputStream( bos )
 		msg.writeTo( dos )
@@ -184,8 +185,10 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 				if( bytesRead > 0 ) {
 					msgBuf.add( buf.array, bytesRead )
 					processMsgBuf
+					startRead
+				} else {
+					failed( new RuntimeException("fail to receive data"), null )
 				}
-				startRead
 			}
 			
 			def failed( exc: Throwable, data: Void ) {
@@ -224,8 +227,9 @@ class AsyncSockMessageChannel( sockChannel: AsynchronousSocketChannel ) extends 
 }
 
 object AsyncSockMessageChannel {
-	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit, exectutor: Option[ExecutorService] = None ) = {
-		val serverSock = if( exectutor.isEmpty ) AsynchronousServerSocketChannel.open() else AsynchronousServerSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
+	private val timer = new Timer
+	def accept( sockAddr: SocketAddress, callback: ((MessageChannel) )=>Unit) = {
+		val serverSock = AsynchronousServerSocketChannel.open
 		serverSock.bind( sockAddr )
 		serverSock.accept( null, new CompletionHandler[AsynchronousSocketChannel, Void]{
 			def completed( sockChannel: AsynchronousSocketChannel, data: Void ) {
@@ -239,8 +243,8 @@ object AsyncSockMessageChannel {
 		serverSock
 	}
 	
-	def asyncConnect( sockAddr: SocketAddress, callback: ( MessageChannel)=>Unit, exectutor: Option[ExecutorService] = None ) {
-		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
+	def asyncConnect( sockAddr: SocketAddress, callback: ( MessageChannel)=>Unit) {
+		val sockChannel = AsynchronousSocketChannel.open
 		
 		sockChannel.connect( sockAddr, null, new CompletionHandler[Void, Void] {
 			def completed( result:Void , attachment:Void  ) {				
@@ -249,13 +253,17 @@ object AsyncSockMessageChannel {
 			}
 			
 			def failed( ex: Throwable , attachment:Void) {
-				callback( null )
+				timer.schedule( new TimerTask {
+					override def run {
+						asyncConnect( sockAddr, callback )
+					}
+				},1000)
 			}
 		})
 	}
 	
-	def connect( sockAddr: SocketAddress, exectutor: Option[ExecutorService] = None ): MessageChannel  = {
-		val sockChannel = if( exectutor.isEmpty ) AsynchronousSocketChannel.open else AsynchronousSocketChannel.open( AsynchronousChannelGroup.withThreadPool( exectutor.get ) )
+	def connect( sockAddr: SocketAddress): MessageChannel  = {
+		val sockChannel = AsynchronousSocketChannel.open
 		val connectedChannel = Promise[MessageChannel]
 		
 		sockChannel.connect( sockAddr, null, new CompletionHandler[Void, Void] {

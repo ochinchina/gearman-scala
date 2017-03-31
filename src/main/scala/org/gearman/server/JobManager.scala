@@ -48,7 +48,16 @@ class JobManager extends Actor {
 		case (client:MessageChannel, PreSleep() ) => workers.sleep( client )
 		case (client:MessageChannel, GetStatus( jobHandle ) ) => handleGetStatus( client, jobHandle )
 		case (client:MessageChannel, GetStatusUnique( uniqId ) ) => handleGetStatusUnique( client, uniqId )
-		case (client:MessageChannel, WorkDataReq( jobHandle, data ) ) => sendWorkData( client, jobHandle, new WorkDataRes(jobHandle, data) )
+		case (client:MessageChannel, workDataReq:WorkDataReq ) => 
+			jobs.find( _.jobHandle == workDataReq.jobHandle ) match {
+				case Some( job ) =>
+					if( job.from == client ) {
+						job.processing.send( workDataReq )
+					} else {
+						job.from.send( new WorkDataRes(workDataReq.jobHandle, workDataReq.data) )
+					}
+				case _=>
+			}
 		case (client:MessageChannel, WorkWarningReq( jobHandle, data ) ) => sendWorkData( client, jobHandle, new WorkWarningRes( jobHandle, data ) )
 		case (client:MessageChannel, WorkFailReq( jobHandle ) ) => sendWorkData( client, jobHandle, new WorkFailRes( jobHandle ), true )
 		case (client:MessageChannel, WorkExceptionReq( jobHandle,data ) ) => sendWorkData( client, jobHandle, new WorkExceptionRes( jobHandle,data ), true )
@@ -63,7 +72,6 @@ class JobManager extends Actor {
 	}
 
   private def handleJob( job: Job ) {
-    println( "handleJob:" + job )
     if( jobs.add( job ) ) {
       job.from.send( JobCreated( job.jobHandle ) )
       workers.wakeup( job.funcName ).foreach{ client => client.send( Noop() ) }
@@ -82,7 +90,6 @@ class JobManager extends Actor {
   }
 
   private def handleGrabJob( client: MessageChannel, uniq: Boolean, reduce: Boolean ) = {
-	println( "handleGrabJob,client=" + client )
     workers.getFuncs(client) match {
       case funcs: List[WorkerFuncInfo] =>
         jobs.find( jb => jb.processing == null && funcs.find( _.funcName == jb.funcName ) != None ) match {
@@ -141,7 +148,9 @@ class JobManager extends Actor {
   		        if( complete ) {
   		          jobs.remove(  job )
   		        }
-  		      }
+  		      } else if( client == job.from ) {
+                          job.processing.send( msg )
+                      }
   		      case _ =>
   		  }
   }
